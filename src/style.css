@@ -1,0 +1,50 @@
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  flex-direction: row;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+}
+
+/* write a media query to change flex direction to column when width < 800px */
+@media (max-width: 1250px) {
+  #menu {
+    padding: 1rem !important;
+    max-width: unset;
+    min-width: 700px;
+  }
+
+  #menu .buttons {
+    flex-direction: row !important;
+  }
+
+  #menu .card-footer {
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #player-list {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #wrapper {
+    flex-direction: column !important;
+  }
+}
+
+#app{
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+
