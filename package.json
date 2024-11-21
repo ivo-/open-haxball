@@ -1,12 +1,14 @@
 {
   "name": "open-haxball",
-  "private": true,
+  "private": false,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://ivo-.github.io/open-haxball/",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy" : "gh-pages -d dist"
   },
   "devDependencies": {
     "@types/matter-js": "^0.19.7",
