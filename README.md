@@ -1,1 +1,1 @@
-Networked phisics, multiplayer, p2p game, prediction
+# Open source Haxball clone
