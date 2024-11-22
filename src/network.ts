@@ -1,8 +1,8 @@
 import { DataConnection, Peer } from "peerjs";
+import { toast } from "./toast";
 
 interface NetworkOptions {
   name: string;
-  onError: (err: any) => void;
   onMessage: (data: unknown, playerID: string) => void;
   onConnect: (playerID: string) => void;
   onDisconnect: (playerID: string) => void;
@@ -24,21 +24,27 @@ export class Network {
     this.peer = new Peer();
 
     this.peer.on("error", (err) => {
-      this.options.onError(err);
-      console.error(err);
+      toast("Error connecting to the server: " + err, "error");
     });
 
     this.peer.on("disconnected", () => {
-      console.error("Disconnected from peer server");
-      this.options.onError(new Error("Disconnected from peer server"));
+      toast("Disconnected from peer server", "error");
     });
 
     this.peer.on("connection", (conn) => {
       this.connections[conn.peer] = conn;
       conn.on("data", (data) => this.options.onMessage(data, conn.peer));
-      conn.on("close", () => this.connectionLost(conn.peer));
+      conn.on("close", () => {
+        toast(
+          "Connection lost with the server. Please refresh the page.",
+          "error"
+        );
+      });
       conn.on("open", () => {
         this.options.onConnect(conn.peer);
+      });
+      conn.on("error", (err) => {
+        toast("Error connecting to the server: " + err, "error");
       });
     });
 
@@ -72,17 +78,21 @@ export class Network {
     return new Promise((resolve) => {
       const c = this.peer!.connect(playerID);
       c.on("open", () => {
-        console.log("Connected to player: ", playerID);
+        toast("Connected to player: " + playerID, "success");
         this.connections[playerID] = c;
         resolve(c);
       });
       c.on("data", (data) => this.options.onMessage(data, playerID));
       c.on("close", () => this.connectionLost(playerID));
+      c.on("error", (err) => {
+        toast("Error connecting to player: " + playerID + " " + err, "error");
+      });
     });
   }
 
   disconnectFrom(playerID: string): void {
     if (!this.peer) throw new Error("Network not started");
+    toast("Disconnected from player: " + playerID, "info");
     this.connections[playerID].close();
     delete this.connections[playerID];
   }

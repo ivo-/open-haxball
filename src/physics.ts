@@ -31,6 +31,7 @@ import {
   PLAYER_MAX_VELOCITY,
 } from "./config";
 import { Keyboard } from "./keyboard";
+import { DOOR_WIDTH } from "./gameMapClassic";
 
 export type PhysicsPlayer = Body & {
   // The last time force was applied to the player. This is used to limit the
@@ -58,10 +59,6 @@ export class Physics {
   private applyForcesTimer: number | null = null;
   private onGoalHandler: GoalHandler;
   private isHost: () => boolean;
-
-  private framesCount = 0;
-  private framesSinceLastSync: Snapshot[] = [];
-  private lastSnapshotFrame = 0;
 
   constructor(
     game: DeepReadonly<Game>,
@@ -109,9 +106,6 @@ export class Physics {
     });
 
     Events.on(this.engine, "beforeUpdate", () => {
-      // TODO: count frames and send as part of the snapshot
-      this.framesSinceLastSync.push(this.getSnapshot());
-      this.framesCount++;
       this.handleBoundaryCollisions();
     });
   }
@@ -252,7 +246,7 @@ export class Physics {
     }) as PhysicsPlayer;
   }
 
-  // TODO: Refactor, proper behavior.
+  // TODO: Properly abstract those in the config.
   private handleBoundaryCollisions(): void {
     const { gameMap } = this.game;
 
@@ -270,7 +264,7 @@ export class Physics {
     const ballPos = this.ball.position;
 
     // Check for goal
-    const goalLineWidth = 30;
+    const goalLineWidth = DOOR_WIDTH;
     const goalLineBlue = gameMap.goalLineBlue;
     const goalLineRed = gameMap.goalLineRed;
 
@@ -508,7 +502,6 @@ export class Physics {
 
   getSnapshot(): Snapshot {
     return {
-      atFrame: this.framesCount,
       ball: {
         x: this.ball.position.x,
         y: this.ball.position.y,
@@ -529,31 +522,6 @@ export class Physics {
 
   applySnapshot(snapshot: Snapshot): void {
     const { ball, players: snapshotPlayers } = snapshot;
-
-    const numberOfFramesSinceLastSnapshot = this.framesSinceLastSync.length;
-    const currentFrame =
-      this.lastSnapshotFrame + numberOfFramesSinceLastSnapshot;
-    const snapshotFrame = snapshot.atFrame;
-
-    console.log(
-      `Frames since last snapshot: ${numberOfFramesSinceLastSnapshot}`,
-      `Current frame: ${currentFrame}`,
-      `Snapshot frame: ${snapshotFrame}`,
-      `Difference: ${currentFrame - snapshotFrame}`,
-      `Ball position: x = ${ball.x - this.ball.position.x}, y = ${
-        ball.y - this.ball.position.y
-      }`,
-      `Players positions: x=${
-        this.players[0].position.x - snapshotPlayers[this.players[0].id].x
-      }, y=${this.players[0].position.y - snapshotPlayers[this.players[0].id].y}
-      )}`
-    );
-
-    this.framesSinceLastSync = [];
-    this.lastSnapshotFrame = snapshot.atFrame;
-
-    // TODO: Check the position of the ball at the frame where the snapshot was taken
-    //       and adjust the position based on the time that has passed since then.
 
     Body.setPosition(this.ball, { x: ball.x, y: ball.y });
     Body.setVelocity(this.ball, { x: ball.velocityX, y: ball.velocityY });

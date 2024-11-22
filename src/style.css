@@ -47,4 +47,6 @@ body {
   text-align: center;
 }
 
-
+.toast-container .toast {
+  height: auto;
+}

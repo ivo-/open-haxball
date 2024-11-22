@@ -72,7 +72,6 @@ export type SnapshotCoordinates = {
 };
 
 export type Snapshot = {
-  atFrame: number;
   ball: SnapshotCoordinates;
   players: Record<string, SnapshotCoordinates>;
 };

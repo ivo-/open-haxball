@@ -14,7 +14,7 @@ const wallMultiplier = 20;
 const innerWidth = width - PLAYER_RADIUS * 4;
 const innerHeight = height - PLAYER_RADIUS * 4;
 
-const doorWidth = 39;
+export const DOOR_WIDTH = 39;
 
 const markingColor = "#C3E7B9";
 const doorColor = "#FFCCCC";
@@ -25,7 +25,7 @@ const classicMap: GameMap = {
   obstacles: [
     // Door 1
     {
-      x: offset - doorWidth,
+      x: offset - DOOR_WIDTH,
       y: height * (1 / 3),
       width: 1,
       height: height / 3,
@@ -34,16 +34,16 @@ const classicMap: GameMap = {
       strokeWidth: 1,
     },
     {
-      x: offset - doorWidth,
+      x: offset - DOOR_WIDTH,
       y: height * (1 / 3),
-      width: doorWidth,
+      width: DOOR_WIDTH,
       height: 1,
       fill: "transparent",
       stroke: doorColor,
       strokeWidth: 1,
     },
     {
-      x: offset - doorWidth,
+      x: offset - DOOR_WIDTH,
       y: height * (2 / 3),
       width: 30,
       height: 1,
@@ -67,7 +67,7 @@ const classicMap: GameMap = {
     },
     // Door 2
     {
-      x: width - offset + doorWidth,
+      x: width - offset + DOOR_WIDTH,
       y: height * (1 / 3),
       width: 1,
       height: height / 3,
@@ -78,7 +78,7 @@ const classicMap: GameMap = {
     {
       x: width - offset,
       y: height * (1 / 3),
-      width: doorWidth,
+      width: DOOR_WIDTH,
       height: 1,
       fill: "transparent",
       stroke: doorColor,
@@ -87,7 +87,7 @@ const classicMap: GameMap = {
     {
       x: width - offset,
       y: height * (2 / 3),
-      width: doorWidth,
+      width: DOOR_WIDTH,
       height: 1,
       fill: "transparent",
       stroke: doorColor,

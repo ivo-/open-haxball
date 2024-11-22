@@ -4,6 +4,7 @@ import { initialKeyboard, onKeyboard } from "./keyboard";
 import { Action, Game, GoalHandler, Player, Snapshot } from "./types";
 import classicMap from "./gameMapClassic";
 import { SYNC_WORLDS_INTERVAL } from "./config";
+import { toast } from "./toast";
 
 export class GameController {
   public game: Game;
@@ -25,10 +26,7 @@ export class GameController {
     this.physics = new Physics(this.game, "#app", this.handleGoal, this.isHost);
 
     this.network = new Network({
-      name: "",
-      onError: (error: Error) => {
-        console.error(error);
-      },
+      name: "", // Will be set later by the UI.
       onMessage: this.handleMessage,
       onConnect: this.handleConnect,
       onDisconnect: this.handleDisconnect,
@@ -37,11 +35,11 @@ export class GameController {
 
   async init() {
     await this.network.waitForConnection();
-    debug("Connected to server: ", this.network.playerID);
+    toast("Connected to server", "info");
   }
 
   handleConnect = (playerID: string) => {
-    debug("Connected to player: ", playerID);
+    toast("Connected to player: " + playerID, "success");
 
     // First player to connect makes the current player the host.
     if (this.game.players.length === 0) {
@@ -60,7 +58,6 @@ export class GameController {
   };
 
   handleDisconnect = (playerID: string) => {
-    debug("Disconnected from player:", playerID);
     const index = this.game.players.findIndex((p) => p.id === playerID);
     if (index !== -1) {
       this.game.players.splice(index, 1);
@@ -238,10 +235,6 @@ export class GameController {
     this.network.broadcast({ type: "identify", name: this.network.playerName });
   }
 }
-
-const debug = (...data: any) => {
-  console.log("Game: ", ...data);
-};
 
 export const createPlayer = (id: string, name: string = "Player " + id) => ({
   id,
