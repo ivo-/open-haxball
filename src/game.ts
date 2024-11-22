@@ -114,11 +114,19 @@ export class GameController {
   };
 
   handleGoal: GoalHandler = (team) => {
+    if (!this.isHost()) {
+      return;
+    }
+
     if (team === "red") {
       this.game.score.red++;
     } else {
       this.game.score.blue++;
     }
+    this.game.players.forEach((player) => {
+      player.keyboard = { ...initialKeyboard };
+    });
+    this.broadcastGame();
 
     if (
       this.game.score.red >= this.game.scoreLimit ||
@@ -128,8 +136,6 @@ export class GameController {
       this.stop();
       return;
     }
-
-    this.broadcastGame();
   };
 
   isHost = () => {

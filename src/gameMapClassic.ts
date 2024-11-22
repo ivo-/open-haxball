@@ -1,11 +1,20 @@
-import { COLLISION_FILTER_OTHER } from "./config";
+import {
+  COLLISION_FILTER_BALL,
+  COLLISION_FILTER_OTHER,
+  PLAYER_RADIUS,
+} from "./config";
 import { GameMap } from "./types";
 
-const width = 950;
-const height = 440;
+const width = 1000;
+const height = 550;
 const offset = 80;
 const wallThickness = 2000;
 const wallMultiplier = 20;
+
+const innerWidth = width - PLAYER_RADIUS * 4;
+const innerHeight = height - PLAYER_RADIUS * 4;
+
+const doorWidth = 39;
 
 const markingColor = "#C3E7B9";
 const doorColor = "#FFCCCC";
@@ -16,7 +25,7 @@ const classicMap: GameMap = {
   obstacles: [
     // Door 1
     {
-      x: offset - 30,
+      x: offset - doorWidth,
       y: height * (1 / 3),
       width: 1,
       height: height / 3,
@@ -25,16 +34,16 @@ const classicMap: GameMap = {
       strokeWidth: 1,
     },
     {
-      x: offset - 30,
+      x: offset - doorWidth,
       y: height * (1 / 3),
-      width: 30,
+      width: doorWidth,
       height: 1,
       fill: "transparent",
       stroke: doorColor,
       strokeWidth: 1,
     },
     {
-      x: offset - 30,
+      x: offset - doorWidth,
       y: height * (2 / 3),
       width: 30,
       height: 1,
@@ -58,7 +67,7 @@ const classicMap: GameMap = {
     },
     // Door 2
     {
-      x: width - offset + 30,
+      x: width - offset + doorWidth,
       y: height * (1 / 3),
       width: 1,
       height: height / 3,
@@ -69,7 +78,7 @@ const classicMap: GameMap = {
     {
       x: width - offset,
       y: height * (1 / 3),
-      width: 30,
+      width: doorWidth,
       height: 1,
       fill: "transparent",
       stroke: doorColor,
@@ -78,7 +87,7 @@ const classicMap: GameMap = {
     {
       x: width - offset,
       y: height * (2 / 3),
-      width: 30,
+      width: doorWidth,
       height: 1,
       fill: "transparent",
       stroke: doorColor,
@@ -119,9 +128,9 @@ const classicMap: GameMap = {
     // center line
     {
       x: width / 2,
-      y: 0,
+      y: PLAYER_RADIUS * 2,
       width: 1,
-      height: height,
+      height: innerHeight,
       fill: markingColor,
       stroke: markingColor,
       strokeWidth: 0,
@@ -134,9 +143,31 @@ const classicMap: GameMap = {
       y: -wallThickness + 2,
       width: width * wallMultiplier,
       height: wallThickness,
+      fill: "transparent",
+      stroke: "transparent",
+      strokeWidth: 0,
+    },
+    {
+      // => inner top
+      x: PLAYER_RADIUS * 2,
+      y: PLAYER_RADIUS * 2,
+      width: innerWidth,
+      height: 2,
       fill: markingColor,
       stroke: markingColor,
       strokeWidth: 0,
+      collisionMask: COLLISION_FILTER_BALL,
+    },
+    {
+      // inner bottom
+      x: PLAYER_RADIUS * 2,
+      y: innerHeight + PLAYER_RADIUS * 2,
+      width: innerWidth,
+      height: 2,
+      fill: markingColor,
+      stroke: markingColor,
+      strokeWidth: 0,
+      collisionMask: COLLISION_FILTER_BALL,
     },
     {
       // bottom
@@ -144,8 +175,8 @@ const classicMap: GameMap = {
       y: height - 2,
       width: width * wallMultiplier,
       height: wallThickness,
-      fill: markingColor,
-      stroke: markingColor,
+      fill: "transparent",
+      stroke: "transparent",
       strokeWidth: 0,
     },
     {
@@ -154,9 +185,31 @@ const classicMap: GameMap = {
       y: -height * (wallMultiplier / 2),
       width: wallThickness,
       height: height * wallMultiplier,
+      fill: "transparent",
+      stroke: "transparent",
+      strokeWidth: 0,
+    },
+    {
+      // => inner left
+      x: PLAYER_RADIUS * 2,
+      y: PLAYER_RADIUS * 2,
+      width: 2,
+      height: innerHeight,
       fill: markingColor,
       stroke: markingColor,
       strokeWidth: 0,
+      collisionMask: COLLISION_FILTER_BALL,
+    },
+    {
+      // => inner right
+      x: innerWidth + PLAYER_RADIUS * 2,
+      y: PLAYER_RADIUS * 2,
+      width: 2,
+      height: innerHeight,
+      fill: markingColor,
+      stroke: markingColor,
+      strokeWidth: 0,
+      collisionMask: COLLISION_FILTER_BALL,
     },
     {
       // => right
@@ -164,8 +217,8 @@ const classicMap: GameMap = {
       y: -height * (wallMultiplier / 2),
       width: wallThickness,
       height: height * wallMultiplier,
-      fill: markingColor,
-      stroke: markingColor,
+      fill: "transparent",
+      stroke: "transparent",
       strokeWidth: 0,
     },
   ],

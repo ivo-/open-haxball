@@ -40,10 +40,6 @@ export class Network {
       conn.on("open", () => {
         this.options.onConnect(conn.peer);
       });
-
-      // XXX: Hack to wait for the connection to be fully established, otherwise
-      //      initial messages might be lost.
-      // setTimeout(() => {}, 100);
     });
 
     this.playerID = "";

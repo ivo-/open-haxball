@@ -262,34 +262,10 @@ export class Physics {
     const playerMinX = PLAYER_RADIUS;
     const playerMinY = PLAYER_RADIUS;
 
-    this.players.forEach((entity) => {
-      const pos = entity.position;
-      if (pos.x > playerMaxX && pos.y < playerMinY) {
-        Body.setPosition(entity, { x: playerMaxX, y: playerMinY });
-        Body.setVelocity(entity, { x: 0, y: 0 });
-      }
-
-      if (pos.x > playerMaxX && pos.y > playerMaxY) {
-        Body.setPosition(entity, { x: playerMaxX, y: playerMaxY });
-        Body.setVelocity(entity, { x: 0, y: 0 });
-      }
-
-      if (pos.x < playerMinX && pos.y > playerMaxY) {
-        Body.setPosition(entity, { x: playerMinX, y: playerMaxY });
-        Body.setVelocity(entity, { x: 0, y: 0 });
-      }
-
-      if (pos.x < playerMinX && pos.y < playerMinY) {
-        Body.setPosition(entity, { x: playerMinX, y: playerMinY });
-        Body.setVelocity(entity, { x: 0, y: 0 });
-      }
-    });
-
-    // Handle ball collisions
-    const ballMaxX = gameMap.width - BALL_RADIUS;
-    const ballMaxY = gameMap.height - BALL_RADIUS;
-    const ballMinX = BALL_RADIUS;
-    const ballMinY = BALL_RADIUS;
+    const ballMaxX = gameMap.width - BALL_RADIUS - PLAYER_RADIUS * 2;
+    const ballMaxY = gameMap.height - BALL_RADIUS - PLAYER_RADIUS * 2;
+    const ballMinX = BALL_RADIUS + PLAYER_RADIUS * 2;
+    const ballMinY = BALL_RADIUS + PLAYER_RADIUS * 2;
 
     const ballPos = this.ball.position;
 
@@ -320,25 +296,40 @@ export class Physics {
       return;
     }
 
-    if (ballPos.x > ballMaxX) {
-      Body.setPosition(this.ball, { x: ballMaxX - 1, y: ballPos.y });
-      Body.setVelocity(this.ball, { x: 0, y: 0 });
-    }
+    const entities: [Body, number, number, number, number][] = this.players.map(
+      (p) => [p, playerMaxX, playerMaxY, playerMinX, playerMinY]
+    );
+    entities.push([this.ball, ballMaxX, ballMaxY, ballMinX, ballMinY]);
 
-    if (ballPos.x < ballMinX) {
-      Body.setPosition(this.ball, { x: ballMinX + 1, y: ballPos.y });
-      Body.setVelocity(this.ball, { x: 0, y: 0 });
-    }
+    entities.forEach(([entity, maxX, maxY, minX, minY]) => {
+      if (entity.position.x >= maxX) {
+        Body.setPosition(entity, { x: maxX, y: entity.position.y });
+        Body.setVelocity(entity, {
+          x: Math.min(entity.velocity.x, -0.1),
+          y: entity.velocity.y,
+        });
+      } else if (entity.position.x <= minX) {
+        Body.setPosition(entity, { x: minX + 1, y: entity.position.y });
+        Body.setVelocity(entity, {
+          x: Math.max(entity.velocity.x, 0.1),
+          y: entity.velocity.y,
+        });
+      }
 
-    if (ballPos.y > ballMaxY) {
-      Body.setPosition(this.ball, { x: ballPos.x, y: ballMaxY - 1 });
-      Body.setVelocity(this.ball, { x: 0, y: 0 });
-    }
-
-    if (ballPos.y < ballMinY) {
-      Body.setPosition(this.ball, { x: ballPos.x, y: ballMinY + 1 });
-      Body.setVelocity(this.ball, { x: 0, y: 0 });
-    }
+      if (entity.position.y >= maxY) {
+        Body.setPosition(entity, { x: entity.position.x, y: maxY });
+        Body.setVelocity(entity, {
+          x: entity.velocity.x,
+          y: Math.min(entity.velocity.y, -0.1),
+        });
+      } else if (entity.position.y <= minY) {
+        Body.setPosition(entity, { x: entity.position.x, y: minY + 1 });
+        Body.setVelocity(entity, {
+          x: entity.velocity.x,
+          y: Math.max(entity.velocity.y, 0.1),
+        });
+      }
+    });
   }
 
   private applyAllForces(): void {
@@ -435,8 +426,9 @@ export class Physics {
       spaceClicked,
     }: Keyboard
   ): void {
+    player.render.lineWidth = spaceClicked ? PLAYER_POWER_KICK_RADIUS * 2 : 0;
+
     if (!this.isHost()) {
-      player.render.lineWidth = spaceClicked ? PLAYER_POWER_KICK_RADIUS * 2 : 0;
       return;
     }
 
@@ -446,8 +438,13 @@ export class Physics {
     ) {
       const velocityVector = { ...player.velocity };
 
-      if (rightClicked) velocityVector.x += MOVEMENT_VELOCITY_CHANGE;
+      let change = MOVEMENT_VELOCITY_CHANGE;
+      if ((leftClicked || rightClicked) && (upClicked || downClicked)) {
+        change /= 2;
+      }
+
       if (leftClicked) velocityVector.x -= MOVEMENT_VELOCITY_CHANGE;
+      if (rightClicked) velocityVector.x += MOVEMENT_VELOCITY_CHANGE;
       if (upClicked) velocityVector.y -= MOVEMENT_VELOCITY_CHANGE;
       if (downClicked) velocityVector.y += MOVEMENT_VELOCITY_CHANGE;
 
@@ -466,7 +463,6 @@ export class Physics {
       }
     }
 
-    player.render.lineWidth = spaceClicked ? PLAYER_POWER_KICK_RADIUS * 2 : 0;
     if (!spaceClicked) return;
 
     const bodyPos = player.position;
