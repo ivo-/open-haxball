@@ -8,7 +8,7 @@ export const COLLISION_FILTER_PLAYER = 8;
 export const COLLISION_FILTER_OTHER = 16;
 
 // The minimum interval between applying movement forces to the player.
-export const MIN_FORCE_APPLY_INTERVAL = 100;
+export const MIN_FORCE_APPLY_INTERVAL = 150;
 
 // The change in velocity applied to the player when moving.
 export const MOVEMENT_VELOCITY_CHANGE = 0.5;
@@ -26,4 +26,4 @@ export const BALL_FORCE_MULTIPLIER = 5;
 export const PHYSICS_RUNNER_INTERVAL = 1000 / 60;
 
 // The time step between world snapshots in milliseconds.
-export const SYNC_WORLDS_INTERVAL = 1000 / 60;
+export const SYNC_WORLDS_INTERVAL = 1000 / 20;
