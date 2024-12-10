@@ -58,16 +58,19 @@ export class Physics {
   private game: DeepReadonly<Game>;
   private applyForcesTimer: number | null = null;
   private onGoalHandler: GoalHandler;
+  private onTriggerSync: () => void;
   private isHost: () => boolean;
 
   constructor(
     game: DeepReadonly<Game>,
     element: string,
     onGoalHandler: GoalHandler,
+    onTriggerSync: () => void,
     isHost: () => boolean
   ) {
     this.game = game;
     this.onGoalHandler = onGoalHandler;
+    this.onTriggerSync = onTriggerSync;
     this.isHost = isHost;
 
     this.engine = Engine.create({
@@ -335,7 +338,12 @@ export class Physics {
         (p) => p.name === String(player.id)
       );
       if (!gamePlayer) continue;
-      this.applyForces(player, gamePlayer.keyboard);
+      const appliedForce = this.applyForces(player, gamePlayer.keyboard);
+      if (appliedForce) {
+        // NOTE: To reduce lag set a specific timestamp in the future
+        // to apply the forces and broadcast the vector with the timestamp.
+        this.onTriggerSync();
+      }
     }
   }
 
@@ -419,11 +427,12 @@ export class Physics {
       downClicked,
       spaceClicked,
     }: Keyboard
-  ): void {
+  ): boolean {
+    let appliedForce = false;
     player.render.lineWidth = spaceClicked ? PLAYER_POWER_KICK_RADIUS * 2 : 0;
 
     if (!this.isHost()) {
-      return;
+      return appliedForce;
     }
 
     if (
@@ -454,10 +463,11 @@ export class Physics {
       if (velocityVector.x !== 0 || velocityVector.y !== 0) {
         Body.setVelocity(player, velocityVector);
         player.__lastForceApplyTime = now();
+        appliedForce = true;
       }
     }
 
-    if (!spaceClicked) return;
+    if (!spaceClicked) return appliedForce;
 
     const bodyPos = player.position;
     const ballPos = this.ball.position;
@@ -476,7 +486,10 @@ export class Physics {
         x: BALL_FORCE_MULTIPLIER * impactDirection.x + playerVelocity.x,
         y: BALL_FORCE_MULTIPLIER * impactDirection.y + playerVelocity.y,
       });
+      appliedForce = true;
     }
+
+    return appliedForce;
   }
 
   start(): void {

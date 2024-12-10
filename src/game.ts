@@ -23,7 +23,13 @@ export class GameController {
       },
     };
 
-    this.physics = new Physics(this.game, "#app", this.handleGoal, this.isHost);
+    this.physics = new Physics(
+      this.game,
+      "#app",
+      this.handleGoal,
+      this.handleSync,
+      this.isHost
+    );
 
     this.network = new Network({
       name: "", // Will be set later by the UI.
@@ -135,12 +141,26 @@ export class GameController {
     }
   };
 
+  handleSync = () => {
+    this.broadcastSnapshot();
+  };
+
   isHost = () => {
     return this.game.players[0]?.id === this.network.playerID;
   };
 
   broadcastGame() {
     this.network.broadcast({ type: "updateGame", game: this.game });
+  }
+
+  broadcastSnapshot() {
+    if (!this.physics.isRunning()) return;
+    if (!this.isHost()) return;
+
+    this.network.broadcast({
+      type: "gameSnapshot",
+      snapshot: this.physics.getSnapshot(),
+    });
   }
 
   start() {
@@ -162,13 +182,7 @@ export class GameController {
     });
 
     this.syncWorldsInterval = setInterval(() => {
-      if (!this.physics.isRunning()) return;
-      if (!this.isHost()) return;
-
-      this.network.broadcast({
-        type: "gameSnapshot",
-        snapshot: this.physics.getSnapshot(),
-      });
+      this.broadcastSnapshot();
     }, SYNC_WORLDS_INTERVAL);
 
     this.physics.start();
