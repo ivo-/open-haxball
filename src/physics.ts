@@ -83,7 +83,8 @@ export class Physics {
       options: {
         width: game.gameMap.width,
         height: game.gameMap.height,
-        showIds: true,
+        background: game.gameMap.background,
+        showIds: false,
         wireframes: false,
       },
     });
@@ -111,6 +112,32 @@ export class Physics {
     Events.on(this.engine, "beforeUpdate", () => {
       this.handleBoundaryCollisions();
     });
+
+    Events.on(this.render, "afterRender", () => {
+      this.drawPlayerNames();
+    });
+  }
+
+  private drawPlayerNames(): void {
+    const context = this.render.context;
+    context.save();
+    context.font = "600 13px Outfit, system-ui, sans-serif";
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.lineWidth = 3;
+    context.strokeStyle = "rgba(0, 0, 0, 0.55)";
+    context.fillStyle = "#ffffff";
+
+    for (const player of this.players) {
+      const name = String(player.id);
+      if (!name) continue;
+      const x = player.position.x + PLAYER_RADIUS + 6;
+      const y = player.position.y;
+      context.strokeText(name, x, y);
+      context.fillText(name, x, y);
+    }
+
+    context.restore();
   }
 
   private createGameObjects() {
@@ -126,7 +153,7 @@ export class Physics {
       restitution: 0.9,
       render: {
         fillStyle: gameMap.ballColor,
-        strokeStyle: "white",
+        strokeStyle: gameMap.ballStroke,
         lineWidth: 2,
       },
       collisionFilter: {
@@ -138,7 +165,8 @@ export class Physics {
     const circleObstacles = gameMap.obstacles
       .filter((obstacle) => "radius" in obstacle)
       .map((obstacle) => {
-        const { x, y, radius, fill, stroke, collisionMask } = obstacle;
+        const { x, y, radius, fill, stroke, strokeWidth, collisionMask } =
+          obstacle;
         return Bodies.circle(x, y, radius, {
           id: emptyID,
           isStatic: true,
@@ -146,7 +174,7 @@ export class Physics {
           render: {
             fillStyle: fill,
             strokeStyle: stroke,
-            lineWidth: 2,
+            lineWidth: strokeWidth ?? 2,
           },
         });
       });

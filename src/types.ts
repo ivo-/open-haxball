@@ -19,6 +19,7 @@ export type Player = Spectator & {
 export type ObstacleCircle = Pos & {
   fill: string;
   stroke: string;
+  strokeWidth?: number;
   radius: number;
   collisionMask?: number;
 };
@@ -37,8 +38,10 @@ export type Obstacle = ObstacleCircle | ObstacleRectangle;
 export type GameMap = {
   width: number;
   height: number;
+  background: string;
   obstacles: Obstacle[];
   ballColor: string;
+  ballStroke: string;
   playerColors: {
     red: string;
     blue: string;

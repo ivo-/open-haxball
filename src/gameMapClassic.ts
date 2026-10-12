@@ -3,233 +3,178 @@ import {
   COLLISION_FILTER_OTHER,
   PLAYER_RADIUS,
 } from "./config";
-import { GameMap } from "./types";
+import { GameMap, Obstacle, ObstacleCircle, ObstacleRectangle } from "./types";
 
 const width = 1000;
 const height = 550;
-const offset = 80;
+const goalInset = 80;
 const wallThickness = 2000;
 const wallMultiplier = 20;
 
-const innerWidth = width - PLAYER_RADIUS * 4;
-const innerHeight = height - PLAYER_RADIUS * 4;
+const margin = PLAYER_RADIUS * 2;
+const innerWidth = width - margin * 2;
+const innerHeight = height - margin * 2;
 
+const goalTop = height / 3;
+const goalBottom = (height * 2) / 3;
+const goalHeight = goalBottom - goalTop;
+
+/** How far the ball must travel past the goal line before it scores. */
 export const DOOR_WIDTH = 39;
 
-const markingColor = "#C3E7B9";
-const doorColor = "#FFCCCC";
+const surround = "#10261c";
+const pitch = "#2a7a46";
+const stripe = "rgba(255, 255, 255, 0.07)";
+const marking = "#d5efc6";
+const red = "#ff4b6b";
+const blue = "#4d8dff";
+const redNet = "#d4526e";
+const blueNet = "#3f78e6";
+
+const paint = COLLISION_FILTER_OTHER;
+
+function rect(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string,
+  stroke = fill,
+  strokeWidth = 0,
+  collisionMask?: number,
+): ObstacleRectangle {
+  return {
+    x,
+    y,
+    width: w,
+    height: h,
+    fill,
+    stroke,
+    strokeWidth,
+    ...(collisionMask !== undefined ? { collisionMask } : {}),
+  };
+}
+
+function circle(
+  x: number,
+  y: number,
+  radius: number,
+  fill: string,
+  stroke = fill,
+  strokeWidth = 2,
+  collisionMask?: number,
+): ObstacleCircle {
+  return {
+    x,
+    y,
+    radius,
+    fill,
+    stroke,
+    strokeWidth,
+    ...(collisionMask !== undefined ? { collisionMask } : {}),
+  };
+}
+
+function pitchStripes(): ObstacleRectangle[] {
+  const bands = 8;
+  const bandWidth = innerWidth / bands;
+  const stripes: ObstacleRectangle[] = [];
+
+  // Mirrored so both goals sit on the same shade and the center circle is not split by a stripe.
+  const lightBands = new Set([0, 2, 5, 7]);
+  for (let i = 0; i < bands; i++) {
+    if (!lightBands.has(i)) continue;
+    stripes.push(
+      rect(margin + i * bandWidth, margin, bandWidth, innerHeight, stripe, "transparent", 0, paint),
+    );
+  }
+
+  return stripes;
+}
+
+function goalArea(side: "red" | "blue"): ObstacleRectangle[] {
+  const mouthX = side === "red" ? goalInset : width - goalInset;
+  const depth = 64;
+  const flare = 32;
+  const line = 2;
+  const top = goalTop - flare;
+  const boxHeight = goalHeight + flare * 2;
+  const x = side === "red" ? mouthX : mouthX - depth;
+  const goalLineX = side === "red" ? mouthX : mouthX - line;
+
+  return [
+    rect(x, top, depth, line, marking, marking, 0, paint),
+    rect(x, top + boxHeight - line, depth, line, marking, marking, 0, paint),
+    rect(
+      side === "red" ? x + depth - line : x,
+      top,
+      line,
+      boxHeight,
+      marking,
+      marking,
+      0,
+      paint,
+    ),
+    // Run the goal line out to the box so it meets the posts.
+    rect(goalLineX, top, line, flare, marking, marking, 0, paint),
+    rect(goalLineX, goalBottom, line, flare, marking, marking, 0, paint),
+  ];
+}
+
+function goal(side: "red" | "blue"): Obstacle[] {
+  const mouthX = side === "red" ? goalInset : width - goalInset;
+  const backX = side === "red" ? mouthX - DOOR_WIDTH : mouthX + DOOR_WIDTH;
+  const barX = side === "red" ? backX : mouthX;
+  const color = side === "red" ? red : blue;
+  const net = side === "red" ? redNet : blueNet;
+
+  return [
+    rect(barX, goalTop, DOOR_WIDTH, goalHeight, net, "transparent", 0, paint),
+    rect(backX, goalTop, 1, goalHeight, color, color, 3),
+    rect(barX, goalTop, DOOR_WIDTH, 1, color, color, 3),
+    rect(barX, goalBottom, DOOR_WIDTH, 1, color, color, 3),
+    circle(mouthX, goalTop, 10, color, "#fff", 2),
+    circle(mouthX, goalBottom, 10, color, "#fff", 2),
+  ];
+}
 
 const classicMap: GameMap = {
   width,
   height,
+  background: surround,
   obstacles: [
-    // Door 1
-    {
-      x: offset - DOOR_WIDTH,
-      y: height * (1 / 3),
-      width: 1,
-      height: height / 3,
-      fill: "transparent",
-      stroke: doorColor,
-      strokeWidth: 1,
-    },
-    {
-      x: offset - DOOR_WIDTH,
-      y: height * (1 / 3),
-      width: DOOR_WIDTH,
-      height: 1,
-      fill: "transparent",
-      stroke: doorColor,
-      strokeWidth: 1,
-    },
-    {
-      x: offset - DOOR_WIDTH,
-      y: height * (2 / 3),
-      width: 30,
-      height: 1,
-      fill: "transparent",
-      stroke: doorColor,
-      strokeWidth: 1,
-    },
-    {
-      x: offset,
-      y: height * (1 / 3),
-      radius: 10,
-      fill: doorColor,
-      stroke: "transparent",
-    },
-    {
-      x: offset,
-      y: height * (2 / 3),
-      radius: 10,
-      fill: doorColor,
-      stroke: "transparent",
-    },
-    // Door 2
-    {
-      x: width - offset + DOOR_WIDTH,
-      y: height * (1 / 3),
-      width: 1,
-      height: height / 3,
-      fill: "transparent",
-      stroke: doorColor,
-      strokeWidth: 1,
-    },
-    {
-      x: width - offset,
-      y: height * (1 / 3),
-      width: DOOR_WIDTH,
-      height: 1,
-      fill: "transparent",
-      stroke: doorColor,
-      strokeWidth: 1,
-    },
-    {
-      x: width - offset,
-      y: height * (2 / 3),
-      width: DOOR_WIDTH,
-      height: 1,
-      fill: "transparent",
-      stroke: doorColor,
-      strokeWidth: 1,
-    },
-    {
-      x: width - offset,
-      y: height * (1 / 3),
-      radius: 10,
-      fill: doorColor,
-      stroke: "transparent",
-    },
-    {
-      x: width - offset,
-      y: height * (2 / 3),
-      radius: 10,
-      fill: doorColor,
-      stroke: "transparent",
-    },
-    // center circle
-    {
-      x: width / 2,
-      y: height / 2,
-      radius: 80,
-      fill: "transparent",
-      stroke: markingColor,
-      collisionMask: COLLISION_FILTER_OTHER,
-    },
-    // center point
-    {
-      x: width / 2,
-      y: height / 2,
-      radius: 5,
-      fill: markingColor,
-      stroke: markingColor,
-      collisionMask: COLLISION_FILTER_OTHER,
-    },
-    // center line
-    {
-      x: width / 2,
-      y: PLAYER_RADIUS * 2,
-      width: 1,
-      height: innerHeight,
-      fill: markingColor,
-      stroke: markingColor,
-      strokeWidth: 0,
-      collisionMask: COLLISION_FILTER_OTHER,
-    },
-    // field markings
-    {
-      // => top
-      x: -width * (wallMultiplier / 2),
-      y: -wallThickness + 2,
-      width: width * wallMultiplier,
-      height: wallThickness,
-      fill: "transparent",
-      stroke: "transparent",
-      strokeWidth: 0,
-    },
-    {
-      // => inner top
-      x: PLAYER_RADIUS * 2,
-      y: PLAYER_RADIUS * 2,
-      width: innerWidth,
-      height: 2,
-      fill: markingColor,
-      stroke: markingColor,
-      strokeWidth: 0,
-      collisionMask: COLLISION_FILTER_BALL,
-    },
-    {
-      // inner bottom
-      x: PLAYER_RADIUS * 2,
-      y: innerHeight + PLAYER_RADIUS * 2,
-      width: innerWidth,
-      height: 2,
-      fill: markingColor,
-      stroke: markingColor,
-      strokeWidth: 0,
-      collisionMask: COLLISION_FILTER_BALL,
-    },
-    {
-      // bottom
-      x: -width * (wallMultiplier / 2),
-      y: height - 2,
-      width: width * wallMultiplier,
-      height: wallThickness,
-      fill: "transparent",
-      stroke: "transparent",
-      strokeWidth: 0,
-    },
-    {
-      // => left
-      x: -wallThickness + 2,
-      y: -height * (wallMultiplier / 2),
-      width: wallThickness,
-      height: height * wallMultiplier,
-      fill: "transparent",
-      stroke: "transparent",
-      strokeWidth: 0,
-    },
-    {
-      // => inner left
-      x: PLAYER_RADIUS * 2,
-      y: PLAYER_RADIUS * 2,
-      width: 2,
-      height: innerHeight,
-      fill: markingColor,
-      stroke: markingColor,
-      strokeWidth: 0,
-      collisionMask: COLLISION_FILTER_BALL,
-    },
-    {
-      // => inner right
-      x: innerWidth + PLAYER_RADIUS * 2,
-      y: PLAYER_RADIUS * 2,
-      width: 2,
-      height: innerHeight,
-      fill: markingColor,
-      stroke: markingColor,
-      strokeWidth: 0,
-      collisionMask: COLLISION_FILTER_BALL,
-    },
-    {
-      // => right
-      x: width - 2,
-      y: -height * (wallMultiplier / 2),
-      width: wallThickness,
-      height: height * wallMultiplier,
-      fill: "transparent",
-      stroke: "transparent",
-      strokeWidth: 0,
-    },
+    rect(margin, margin, innerWidth, innerHeight, pitch, "transparent", 0, paint),
+    ...pitchStripes(),
+
+    // Ball rails. The side rails sit at the back of each goal, so the mouth stays open.
+    rect(margin, margin, innerWidth, 2, marking, marking, 0, COLLISION_FILTER_BALL),
+    rect(margin, innerHeight + margin, innerWidth, 2, marking, marking, 0, COLLISION_FILTER_BALL),
+    rect(margin, margin, 2, innerHeight, marking, marking, 0, COLLISION_FILTER_BALL),
+    rect(innerWidth + margin, margin, 2, innerHeight, marking, marking, 0, COLLISION_FILTER_BALL),
+
+    rect(width / 2 - 1.5, margin, 3, innerHeight, marking, marking, 0, paint),
+    ...goalArea("red"),
+    ...goalArea("blue"),
+    ...goal("red"),
+    ...goal("blue"),
+
+    circle(width / 2, height / 2, 80, "transparent", marking, 2, paint),
+    circle(width / 2, height / 2, 4, marking, marking, 0, paint),
+
+    // Outer walls. Players are also clamped in physics, so these catch anything that slips through.
+    rect(-width * (wallMultiplier / 2), -wallThickness + 2, width * wallMultiplier, wallThickness, "transparent", "transparent"),
+    rect(-width * (wallMultiplier / 2), height - 2, width * wallMultiplier, wallThickness, "transparent", "transparent"),
+    rect(-wallThickness + 2, -height * (wallMultiplier / 2), wallThickness, height * wallMultiplier, "transparent", "transparent"),
+    rect(width - 2, -height * (wallMultiplier / 2), wallThickness, height * wallMultiplier, "transparent", "transparent"),
   ],
   initialPos: {
     red: [
-      { x: 100, y: 200 },
-      { x: 100, y: 300 },
+      { x: 200, y: height / 2 - 80 },
+      { x: 200, y: height / 2 + 80 },
     ],
     blue: [
-      { x: 800, y: 200 },
-      { x: 800, y: 300 },
+      { x: width - 200, y: height / 2 - 80 },
+      { x: width - 200, y: height / 2 + 80 },
     ],
     ball: {
       x: width / 2,
@@ -237,21 +182,22 @@ const classicMap: GameMap = {
     },
   },
   goalLineRed: {
-    x: offset,
-    y: height * (1 / 3),
-    y2: height * (2 / 3),
-    color: markingColor,
+    x: goalInset,
+    y: goalTop,
+    y2: goalBottom,
+    color: marking,
   },
   goalLineBlue: {
-    x: width - offset,
-    y: height * (1 / 3),
-    y2: height * (2 / 3),
-    color: markingColor,
+    x: width - goalInset,
+    y: goalTop,
+    y2: goalBottom,
+    color: marking,
   },
-  ballColor: "green",
+  ballColor: "#f4fff8",
+  ballStroke: "#1a5c38",
   playerColors: {
-    red: "#ff3860",
-    blue: "#3273dc",
+    red,
+    blue,
   },
 };
 
