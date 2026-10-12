@@ -112,6 +112,10 @@
                     <span class="player-name" x-text="player.name"></span>
                     <span class="badge" x-show="player.isYou">you</span>
                     <span class="badge" x-show="player.isHost">host</span>
+                    <span class="ping" x-show="!player.isYou"
+                      :class="'is-' + player.pingQuality"
+                      title="Round-trip time"
+                      x-text="player.pingLabel"></span>
                     <div class="player-actions">
                       <div class="team-switch" x-show="isHost" role="group" aria-label="Change team">
                         <template x-for="team in teams" :key="team.id">
@@ -204,6 +208,12 @@
             <span class="score-name">Blue</span>
           </span>
         </div>
+        <span class="ping-chip" x-show="hudPing" x-cloak
+          :class="hudPing && 'is-' + hudPing.quality"
+          :title="hudPing?.title">
+          <span class="ping-dot"></span>
+          <span x-text="hudPing?.label"></span>
+        </span>
         <button type="button" class="btn btn-danger" x-show="showStop" @click="stop">
           <i class="fas fa-stop"></i>
           Stop

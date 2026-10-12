@@ -6,12 +6,23 @@ import { Player } from "./types";
 import { GameController } from "./game";
 import { MAPS } from "./maps";
 
+type PingQuality = "local" | "good" | "ok" | "laggy" | "poor" | "wait";
+
 type PlayerRow = {
   id: string;
   name: string;
   team: Player["team"];
   isHost: boolean;
   isYou: boolean;
+  ping: number | null;
+  pingLabel: string;
+  pingQuality: PingQuality;
+};
+
+type HudPing = {
+  label: string;
+  quality: PingQuality;
+  title: string;
 };
 
 type TeamGroup = {
@@ -116,6 +127,34 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       return "Waiting for the host to start.";
     },
 
+    get hudPing(): HudPing | null {
+      if (!this.inGame) return null;
+      if (this.isHost) {
+        const others = this.players
+          .filter((player) => !player.isYou && player.ping != null)
+          .map((player) => player.ping as number);
+        if (others.length === 0) {
+          return this.players.some((player) => !player.isYou)
+            ? { label: "…", quality: "wait", title: "Measuring ping to players" }
+            : null;
+        }
+        const worst = Math.max(...others);
+        const quality = pingQuality(worst);
+        return {
+          label: `${worst}ms`,
+          quality,
+          title: "Highest ping in the match",
+        };
+      }
+      const host = this.players.find((player) => player.isHost);
+      if (!host) return null;
+      return {
+        label: host.pingLabel,
+        quality: host.pingQuality,
+        title: "Your ping to the host",
+      };
+    },
+
     init() {
       document.getElementById("boot")?.remove();
 
@@ -148,13 +187,21 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       this.running = controller.isRunning();
       this.inGame = controller.game.players.length > 0;
       this.mapId = controller.game.mapId;
-      this.players = controller.game.players.map((player, index) => ({
-        id: player.id,
-        name: player.name,
-        team: player.team,
-        isHost: index === 0,
-        isYou: player.id === this.playerID,
-      }));
+      this.players = controller.game.players.map((player, index) => {
+        const isYou = player.id === this.playerID;
+        const ping = controller.getPing(player.id);
+        const quality = pingQuality(ping, isYou);
+        return {
+          id: player.id,
+          name: player.name,
+          team: player.team,
+          isHost: index === 0,
+          isYou,
+          ping,
+          pingLabel: pingLabel(ping, isYou),
+          pingQuality: quality,
+        };
+      });
     },
 
     completeSetup() {
@@ -318,6 +365,21 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       }
     },
   };
+}
+
+function pingQuality(ms: number | null, isYou = false): PingQuality {
+  if (isYou) return "local";
+  if (ms == null) return "wait";
+  if (ms < 80) return "good";
+  if (ms < 150) return "ok";
+  if (ms < 250) return "laggy";
+  return "poor";
+}
+
+function pingLabel(ms: number | null, isYou: boolean): string {
+  if (isYou) return "local";
+  if (ms == null) return "…";
+  return `${ms}ms`;
 }
 
 function parseGameId(input: string): string {

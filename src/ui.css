@@ -342,6 +342,51 @@
   text-transform: uppercase;
 }
 
+.ping {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.ping.is-good { color: var(--green); }
+.ping.is-ok { color: #e4c15c; }
+.ping.is-laggy { color: #f0a14a; }
+.ping.is-poor { color: var(--danger); }
+
+.ping-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ping-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.ping-chip.is-good { color: var(--green); }
+.ping-chip.is-good .ping-dot { background: var(--green); }
+.ping-chip.is-ok { color: #e4c15c; }
+.ping-chip.is-ok .ping-dot { background: #e4c15c; }
+.ping-chip.is-laggy { color: #f0a14a; }
+.ping-chip.is-laggy .ping-dot { background: #f0a14a; }
+.ping-chip.is-poor { color: var(--danger); }
+.ping-chip.is-poor .ping-dot { background: var(--danger); }
+
 .player-actions {
   display: flex;
   align-items: center;

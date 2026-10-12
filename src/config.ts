@@ -27,3 +27,6 @@ export const PHYSICS_RUNNER_INTERVAL = 1000 / 60;
 
 // The time step between world snapshots in milliseconds.
 export const SYNC_WORLDS_INTERVAL = 1000 / 20;
+
+// How often to measure round-trip time to connected players.
+export const PING_INTERVAL = 1500;

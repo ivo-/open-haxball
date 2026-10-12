@@ -262,6 +262,10 @@ export class GameController {
     return this.network.playerID;
   }
 
+  getPing(playerID: string): number | null {
+    return this.network.getPing(playerID);
+  }
+
   isRunning() {
     return this.physics.isRunning();
   }
