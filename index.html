@@ -5,17 +5,238 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Teko:wght@500;600&display=swap" rel="stylesheet" />
   <title>Open Haxball</title>
-  <script type="module" crossorigin src="/open-haxball/assets/index-D45wwcO0.js"></script>
-  <link rel="stylesheet" crossorigin href="/open-haxball/assets/index-CTW2aAet.css">
+  <style>
+    [x-cloak] { display: none !important; }
+    .boot-screen {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: #0b0f0d;
+      color: #9aa59d;
+      font-family: Outfit, system-ui, sans-serif;
+    }
+    .boot-card { text-align: center; }
+    .boot-ball {
+      width: 18px;
+      height: 18px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      background: #3dd68c;
+      box-shadow: 0 0 0 8px rgba(61, 214, 140, 0.12);
+      animation: boot-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes boot-pulse {
+      50% { transform: scale(0.85); opacity: 0.7; }
+    }
+  </style>
+  <script type="module" crossorigin src="/open-haxball/assets/index-DOX4dAPn.js"></script>
+  <link rel="stylesheet" crossorigin href="/open-haxball/assets/index-6wu0dD5x.css">
 </head>
 
 <body>
-  <div id="wrapper" class="is-flex is-flex-direction-row is-align-items-center is-justify-content-center">
-    <div id="menu" class="card"></div>
-    <div id="app"></div>
+  <div id="boot" class="boot-screen">
+    <div class="boot-card">
+      <div class="boot-ball"></div>
+      <p>Connecting…</p>
+    </div>
+  </div>
+
+  <div id="wrapper" class="app-shell" x-data="gameMenu" x-cloak
+    :class="{ 'is-playing': running, 'is-lobby': inGame && !running, 'is-setup': !setupDone }">
+    <aside id="menu" class="panel" x-show="!running">
+      <section class="setup" x-show="!setupDone">
+        <div class="brand">
+          <span class="brand-ball"></span>
+          <h1>Open Haxball</h1>
+        </div>
+        <p class="lede" x-show="invited">You've been invited. Pick a name and jump in.</p>
+        <p class="lede" x-show="!invited">Pick a name to host a match or join a friend.</p>
+        <form class="setup-form" @submit.prevent="completeSetup">
+          <label class="field-label" for="player-name">Your name</label>
+          <input id="player-name" class="field-input" type="text" x-model="draftName" maxlength="20"
+            placeholder="e.g. Alex" autocomplete="nickname" autofocus />
+          <p class="field-error" x-show="nameError" x-text="nameError"></p>
+          <button type="submit" class="btn btn-primary btn-block"
+            x-text="invited ? 'Join match' : 'Continue'"></button>
+        </form>
+      </section>
+
+      <section class="hud" x-show="setupDone">
+        <header class="panel-header">
+          <div class="brand-mini">
+            <span class="brand-ball sm"></span>
+            Open Haxball
+          </div>
+          <label class="you-chip">
+            <span class="you-chip-label">You</span>
+            <input class="you-chip-input" type="text" maxlength="20" autocomplete="nickname"
+              aria-label="Your name" x-model="name" @blur="saveName"
+              @keydown.enter.prevent="$el.blur()" />
+          </label>
+        </header>
+
+        <div class="scoreboard" aria-label="Score" x-show="inGame">
+          <div class="score-team is-red">
+            <span class="score-name">Red</span>
+            <span class="score-value" x-text="scoreRed">0</span>
+          </div>
+          <span class="score-divider">vs</span>
+          <div class="score-team is-blue">
+            <span class="score-name">Blue</span>
+            <span class="score-value" x-text="scoreBlue">0</span>
+          </div>
+        </div>
+
+        <p class="status" x-text="statusHint"></p>
+
+        <div class="banner" x-show="joining">
+          <span class="spinner"></span>
+          Joining match…
+        </div>
+
+        <div class="teams" x-show="inGame">
+          <template x-for="group in teamGroups" :key="group.id">
+            <section class="team-group" :class="'is-' + group.id">
+              <header class="team-head">
+                <span class="team-swatch"></span>
+                <h3 x-text="group.label"></h3>
+                <span class="team-count" x-text="group.players.length"></span>
+              </header>
+              <ul class="team-list">
+                <template x-for="player in group.players" :key="player.id">
+                  <li class="player-row" :class="{ 'is-you': player.isYou }">
+                    <span class="player-name" x-text="player.name"></span>
+                    <span class="badge" x-show="player.isYou">you</span>
+                    <span class="badge" x-show="player.isHost">host</span>
+                    <span class="ping" x-show="!player.isYou"
+                      :class="'is-' + player.pingQuality"
+                      title="Round-trip time"
+                      x-text="player.pingLabel"></span>
+                    <div class="player-actions">
+                      <div class="team-switch" x-show="isHost" role="group" aria-label="Change team">
+                        <template x-for="team in teams" :key="team.id">
+                          <button type="button" class="team-dot"
+                            :class="[team.id, player.team === team.id && 'is-active']"
+                            :title="team.label"
+                            :aria-pressed="player.team === team.id"
+                            @click="changeTeam(player.id, team.id)"></button>
+                        </template>
+                      </div>
+                      <button type="button" class="icon-btn danger" title="Remove player"
+                        x-show="isHost && !player.isHost" @click="kickPlayer(player.id)">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                  </li>
+                </template>
+              </ul>
+              <p class="team-empty" x-show="group.players.length === 0">Empty</p>
+            </section>
+          </template>
+        </div>
+
+        <div class="invite" x-show="inGame">
+          <button type="button" class="btn btn-secondary btn-block" @click="copyInvite">
+            <i class="fas" :class="copied ? 'fa-check' : 'fa-link'"></i>
+            <span x-text="copied ? 'Invite link copied' : 'Copy invite link'"></span>
+          </button>
+          <p class="hint" x-show="!running">Share this link. Friends join in the browser.</p>
+        </div>
+
+        <div class="map-picker" x-show="inGame && !running">
+          <p class="field-label">Map</p>
+          <div class="map-options" role="radiogroup" aria-label="Map">
+            <template x-for="map in maps" :key="map.id">
+              <button type="button" class="map-option" role="radio"
+                :class="{ 'is-selected': mapId === map.id }"
+                :aria-checked="mapId === map.id"
+                :disabled="!isHost"
+                @click="selectMap(map.id)">
+                <span class="map-swatch" :class="'is-' + map.id"></span>
+                <span class="map-name" x-text="map.name"></span>
+                <span class="map-blurb" x-text="map.blurb"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary btn-block" x-show="showCreate" :disabled="joining" @click="createMatch">
+            <i class="fas fa-plus"></i>
+            Create match
+          </button>
+          <button type="button" class="btn btn-primary btn-block" x-show="showStart" :disabled="joining" @click="start">
+            <i class="fas fa-play"></i>
+            Start match
+          </button>
+          <button type="button" class="btn btn-ghost btn-block" x-show="showLeave" @click="leave">
+            <i class="fas fa-sign-out-alt"></i>
+            Leave match
+          </button>
+        </div>
+
+        <div class="join-area" x-show="showJoin">
+          <button type="button" class="text-btn" @click="joinOpen = !joinOpen">
+            <span x-text="joinOpen ? 'Hide join form' : 'Have an invite link?'"></span>
+          </button>
+          <form class="join-form" x-show="joinOpen || joinError" @submit.prevent="joinFromInput">
+            <input class="field-input" :class="{ 'is-invalid': joinError }" type="text"
+              x-model="joinInput" placeholder="Paste invite link" aria-label="Invite link to join"
+              :disabled="joining" />
+            <button type="submit" class="btn btn-secondary" :disabled="joining"
+              x-text="joining ? 'Joining…' : 'Join'"></button>
+            <p class="field-error" x-show="joinError" x-text="joinError"></p>
+          </form>
+        </div>
+      </section>
+    </aside>
+
+    <div class="match-hud" x-show="running">
+      <div class="match-bar">
+        <div class="match-score" aria-label="Score">
+          <span class="match-score-side is-red">
+            <span class="score-name">Red</span>
+            <strong class="score-value" x-text="scoreRed">0</strong>
+          </span>
+          <span class="score-divider">vs</span>
+          <span class="match-score-side is-blue">
+            <strong class="score-value" x-text="scoreBlue">0</strong>
+            <span class="score-name">Blue</span>
+          </span>
+        </div>
+        <span class="ping-chip" x-show="hudPing" x-cloak
+          :class="hudPing && 'is-' + hudPing.quality"
+          :title="hudPing?.title">
+          <span class="ping-dot"></span>
+          <span x-text="hudPing?.label"></span>
+        </span>
+        <button type="button" class="btn btn-danger" x-show="showStop" @click="stop">
+          <i class="fas fa-stop"></i>
+          Stop
+        </button>
+        <button type="button" class="btn btn-ghost" x-show="showLeave" @click="leave">
+          <i class="fas fa-sign-out-alt"></i>
+          Leave
+        </button>
+      </div>
+      <p class="controls-hint">
+        <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>
+        move
+        <span class="dot-sep">·</span>
+        <kbd>Space</kbd>
+        kick
+        <span class="dot-sep">·</span>
+        <span x-text="mapName"></span>
+      </p>
+    </div>
+
+    <div id="app" class="pitch"></div>
   </div>
 </body>
 
