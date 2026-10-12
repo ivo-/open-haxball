@@ -1,16 +1,26 @@
 <h1>Open-source <a href="https://www.haxball.com/" target="_blank">Haxball</a> clone</h1>
-<img width="1370" alt="Screen Shot 2024-11-22 at 8 36 34 PM" src="https://github.com/user-attachments/assets/b87af385-de05-4277-b2e1-3eaf34e88967">
+<img width="1100" alt="Open Haxball" src="screenshot.png">
+
+Browser 2D football. Host a match, share a link, play in the same tab.
+
+Play at https://ivo-.github.io/open-haxball/
 
 ## How to play
 
-* Go to https://ivo-.github.io/open-haxball/
-* Give your friend your ID, so he can connect to you
-* Choose a team for every player by hovering over player color box
-* Start the game
+1. Pick a name.
+2. **Create match**, or paste an invite link to join.
+3. Host: assign teams, pick a map (Classic or Hockey), copy the invite link, then **Start match**.
+4. Arrow keys to move, Space to kick.
 
-Once someone scores 5 goals, the game will be stopped. To play another one, just click start again.
+First to 5 goals wins. Start again to reset the score and positions. Leave to go back to the home screen.
 
-You will most probably experiance various glitches. Physics is noticably different.
+Physics is still noticeably different from Haxball. Expect glitches.
 
-Based on [matter.js](https://github.com/liabru/matter-js) and [peer.js](https://github.com/peers/peerjs).
+## Run locally
 
+```sh
+npm install
+npm run dev
+```
+
+Built with [Vite](https://vitejs.dev/), [Alpine.js](https://alpinejs.dev/), [matter.js](https://github.com/liabru/matter-js), and [peer.js](https://github.com/peers/peerjs).
