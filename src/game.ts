@@ -74,15 +74,15 @@ export class GameController {
     const wasHost = this.game.players[0]?.id === playerID;
     const index = this.game.players.findIndex((p) => p.id === playerID);
     if (index === -1) return;
+    const playerName = this.game.players[index].name;
     this.game.players.splice(index, 1);
+    toast(`${playerName} left the match`, "info");
 
     if (wasHost) {
-      toast("The host left the match", "info");
       this.handleMatchEnded();
       return;
     }
 
-    toast("A player left", "info");
     this.broadcastGame();
   };
 
