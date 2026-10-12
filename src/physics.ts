@@ -5,7 +5,6 @@ import {
   Bodies,
   Body,
   Composite,
-  Runner,
   Events,
   World,
 } from "matter-js";
@@ -47,16 +46,20 @@ const nameToID = (name: string) => name as unknown as number;
 
 const now = () => Date.now();
 
+/** Max physics steps per timer fire after a long pause (e.g. returning from a background tab). */
+const MAX_CATCH_UP_STEPS = 5;
+
 export class Physics {
   private engine: Engine;
   private render: Render;
-  private runner: Runner;
   private ball!: Body;
   private world: World;
   private players: PhysicsPlayer[] = [];
 
   private game: DeepReadonly<Game>;
-  private applyForcesTimer: number | null = null;
+  private simTimer: number | null = null;
+  private lastSimTime = 0;
+  private simAccumulator = 0;
   private onGoalHandler: GoalHandler;
   private onTriggerSync: () => void;
   private isHost: () => boolean;
@@ -92,11 +95,6 @@ export class Physics {
 
     this.world = this.engine.world;
     this.loadMap();
-
-    this.runner = Runner.create({
-      // TODO: Should be fixed? Running in background?
-      delta: PHYSICS_RUNNER_INTERVAL,
-    });
 
     Events.on(this.engine, "beforeUpdate", () => {
       this.handleBoundaryCollisions();
@@ -611,24 +609,50 @@ export class Physics {
     this.loadMap();
     this.syncPlayers();
     this.resetPositions();
+    // Drawing stays on rAF; simulation uses a timer so it keeps ticking in background tabs.
     Render.run(this.render);
-    Runner.run(this.runner, this.engine);
-    this.applyForcesTimer = setInterval(() => this.applyAllForces(), 1000 / 30);
+    this.lastSimTime = performance.now();
+    this.simAccumulator = 0;
+    this.simTimer = window.setInterval(this.tickSim, PHYSICS_RUNNER_INTERVAL);
   }
 
   stop(): void {
-    if (!this.applyForcesTimer) return;
+    if (!this.simTimer) return;
 
-    clearInterval(this.applyForcesTimer);
-    this.applyForcesTimer = null;
+    window.clearInterval(this.simTimer);
+    this.simTimer = null;
+    this.simAccumulator = 0;
 
     Render.stop(this.render);
-    Runner.stop(this.runner);
   }
 
   isRunning(): boolean {
-    return !!this.applyForcesTimer;
+    return !!this.simTimer;
   }
+
+  private tickSim = (): void => {
+    const current = performance.now();
+    let elapsed = current - this.lastSimTime;
+    this.lastSimTime = current;
+
+    const maxCatchUp = PHYSICS_RUNNER_INTERVAL * MAX_CATCH_UP_STEPS;
+    if (elapsed > maxCatchUp) {
+      elapsed = maxCatchUp;
+    }
+
+    this.simAccumulator += elapsed;
+
+    let steps = 0;
+    while (
+      this.simAccumulator >= PHYSICS_RUNNER_INTERVAL &&
+      steps < MAX_CATCH_UP_STEPS
+    ) {
+      this.applyAllForces();
+      Engine.update(this.engine, PHYSICS_RUNNER_INTERVAL);
+      this.simAccumulator -= PHYSICS_RUNNER_INTERVAL;
+      steps++;
+    }
+  };
 
   getSnapshot(): Snapshot {
     return {

@@ -22,7 +22,7 @@ export const PLAYER_POWER_KICK_RADIUS = 10;
 // The force multiplier applied to the ball when kicked by a player.
 export const BALL_FORCE_MULTIPLIER = 5;
 
-// The time step between updates in milliseconds.
+// Fixed physics timestep in milliseconds (driven by setInterval, not rAF).
 export const PHYSICS_RUNNER_INTERVAL = 1000 / 60;
 
 // The time step between world snapshots in milliseconds.
