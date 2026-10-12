@@ -6,6 +6,13 @@ import classicMap from "./gameMapClassic";
 import { SYNC_WORLDS_INTERVAL } from "./config";
 import { toast } from "./toast";
 
+// TODO:
+//
+// - [ ] Add game rooms with supabase
+// - [ ] Allow create/delete games
+// - [ ] Create a proper UI
+//
+
 export class GameController {
   public game: Game;
   public physics: Physics;
@@ -28,7 +35,7 @@ export class GameController {
       "#app",
       this.handleGoal,
       this.handleSync,
-      this.isHost
+      this.isHost,
     );
 
     this.network = new Network({
@@ -45,13 +52,13 @@ export class GameController {
   }
 
   handleConnect = (playerID: string) => {
-    toast("Connected to player: " + playerID, "success");
+    toast("A player joined", "success");
 
     // First player to connect makes the current player the host.
     if (this.game.players.length === 0) {
       this.game.players.push(
         createPlayer(this.network.playerID, this.network.playerName),
-        createPlayer(playerID)
+        createPlayer(playerID),
       );
 
       this.broadcastGame();
@@ -89,7 +96,7 @@ export class GameController {
         if (!player) return;
         if (!this.isHost()) return;
         const sameNamePlayer = this.game.players.filter(
-          (p) => p.name === action.name && p.id !== playerID
+          (p) => p.name === action.name && p.id !== playerID,
         );
         if (sameNamePlayer.length > 0) {
           player.name = action.name + `(${sameNamePlayer.length})`;
@@ -166,13 +173,13 @@ export class GameController {
   start() {
     if (this.game.players.length === 0) {
       this.game.players.push(
-        createPlayer(this.network.playerID, this.network.playerName)
+        createPlayer(this.network.playerID, this.network.playerName),
       );
     }
 
     onKeyboard((keyboard) => {
       const player = this.game.players.find(
-        (p) => p.id === this.network.playerID
+        (p) => p.id === this.network.playerID,
       );
       if (!player || player.team === "spectator") return;
 

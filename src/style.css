@@ -1,52 +1,69 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
-  flex-direction: row;
   overflow: hidden;
+  color: #eef3ef;
+  background:
+    radial-gradient(900px 520px at 50% -10%, rgba(61, 214, 140, 0.08), transparent 55%),
+    radial-gradient(1200px 800px at 50% 120%, rgba(77, 141, 255, 0.06), transparent 50%),
+    #0b0f0d;
+  font-family: Outfit, system-ui, sans-serif;
+}
+
+.app-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 24px;
+  gap: 28px;
+}
+
+.app-shell.is-playing {
   align-items: center;
   justify-content: center;
 }
 
-/* write a media query to change flex direction to column when width < 800px */
-@media (max-width: 1250px) {
-  #menu {
-    padding: 1rem !important;
-    max-width: unset;
-    min-width: 700px;
-  }
-
-  #menu .buttons {
-    flex-direction: row !important;
-  }
-
-  #menu .card-footer {
-    flex-direction: row !important;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  #player-list {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  #wrapper {
-    flex-direction: column !important;
-  }
+.app-shell.is-setup .panel {
+  width: 380px;
 }
 
-#app{
+#app {
   max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  margin: 0;
+  padding: 0;
   text-align: center;
 }
 
 .toast-container .toast {
   height: auto;
+}
+
+@media (max-width: 1100px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell,
+  .app-shell.is-playing {
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 16px;
+    gap: 16px;
+  }
 }

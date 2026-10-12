@@ -79,21 +79,21 @@ export class Network {
     return new Promise((resolve) => {
       const c = this.peer!.connect(playerID);
       c.on("open", () => {
-        toast("Connected to player: " + playerID, "success");
+        toast("Connected to the match", "success");
         this.connections[playerID] = c;
         resolve(c);
       });
       c.on("data", (data) => this.options.onMessage(data, playerID));
       c.on("close", () => this.connectionLost(playerID));
-      c.on("error", (err) => {
-        toast("Error connecting to player: " + playerID + " " + err, "error");
+      c.on("error", () => {
+        toast("Couldn't join that match. Check the invite link.", "error");
       });
     });
   }
 
   disconnectFrom(playerID: string): void {
     if (!this.peer) throw new Error("Network not started");
-    toast("Disconnected from player: " + playerID, "info");
+    toast("A player left", "info");
     this.connections[playerID].close();
     delete this.connections[playerID];
   }

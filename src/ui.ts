@@ -1,281 +1,325 @@
 import "./ui.css";
 
-import deepEqual from "fast-deep-equal";
+import Alpine from "alpinejs";
 import { DeepReadonly } from "ts-essentials";
 import { Player } from "./types";
 import { GameController } from "./game";
 
+type PlayerRow = {
+  id: string;
+  name: string;
+  team: Player["team"];
+  isHost: boolean;
+  isYou: boolean;
+};
+
+type TeamGroup = {
+  id: Player["team"];
+  label: string;
+  players: PlayerRow[];
+};
+
+const TEAMS: { id: Player["team"]; label: string }[] = [
+  { id: "red", label: "Red" },
+  { id: "blue", label: "Blue" },
+  { id: "spectator", label: "Spectators" },
+];
+
 export class UI {
-  private menu: HTMLElement;
-  private scoreRed: HTMLElement;
-  private scoreBlue: HTMLElement;
-  private startButton: HTMLElement;
-  private stopButton: HTMLElement;
-  private leaveButton: HTMLElement;
-  private controlsSeparator: HTMLElement;
-  private joinGameField: HTMLElement;
-  private joinGameButton: HTMLElement;
-  private joinGameInput: HTMLInputElement;
-  private playersList: HTMLElement;
-  private currentPlayerID: HTMLElement;
-  private currentPlayerName: HTMLElement;
-  private state: ReturnType<typeof this.getUIState> = {} as any;
-  private controller: DeepReadonly<GameController>;
-
   constructor(controller: DeepReadonly<GameController>) {
-    this.controller = controller;
-
-    this.menu = document.getElementById("menu")!;
-    this.initializeHTML();
-
-    this.scoreRed = document.getElementById("red-score")!;
-    this.scoreBlue = document.getElementById("blue-score")!;
-    this.startButton = document.getElementById("start-game")!;
-    this.stopButton = document.getElementById("stop-game")!;
-    this.leaveButton = document.getElementById("leave-game")!;
-    this.controlsSeparator = document.getElementById("controls-separator")!;
-    this.joinGameField = document.getElementById("join-game")!;
-    this.joinGameButton = this.joinGameField.querySelector("button")!;
-    this.joinGameInput = this.joinGameField.querySelector(
-      "input"
-    )! as HTMLInputElement;
-    this.playersList = document.getElementById("player-list")!;
-    this.currentPlayerID = document.getElementById("current-player-id")!;
-    this.currentPlayerName = document.getElementById("current-player-name")!;
-
-    this.bindEvents();
-
-    // Update current player name.
-    controller.changeName(controller.getPlayerID(), this.getPlayerName());
-
-    // Start refresh loop
-    this.refresh();
-    setInterval(() => this.refresh(), 500);
-
-    // DEBUG: Start the game directly
-    // this.controller.start();
+    Alpine.data("gameMenu", () => createGameMenu(controller));
+    Alpine.start();
   }
+}
 
-  private initializeHTML() {
-    const menuHTML = `
-      <h2 class="title is-5 score is-flex is-flex-direction-row is-align-items-center is-justify-content-center">
-        <span class="team-color red-team"></span><span id="red-score">0</span>
-        <span class="ml-1 mr-1">vs</span>
-        <span class="team-color blue-team"></span><span id="blue-score">0</span>
-      </h2>
-      <div class="content">
-        <ul id="player-list" style="list-style-type: none;">
-        </ul>
-      </div>
-      <div class="content">
-        <div class="buttons is-flex is-flex-direction-column is-align-items-center is-justify-content-center">
-          <button id="start-game" class="button is-primary is-small">Start Game</button>
-          <button id="stop-game" class="button is-danger is-small is-hidden">Stop Game</button>
-          <button id="leave-game" class="button is-warning is-small is-hidden">Leave Game</button>
-          <span id="controls-separator" class="is-size-6 mx-2">or</span>
-          <div id="join-game" class="field has-addons">
-            <div class="control is-expanded">
-              <input class="input is-small" type="text" placeholder="Enter game code">
-            </div>
-            <div class="control">
-              <button class="button is-link is-small">Join</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <footer class="card-footer is-flex-direction-column">
-        <p class="footer-text">
-          Your Name: <strong id="current-player-name"></strong>
-          <span id="change-name-icon" class="icon is-small ml-1 is-clickable">
-            <i class="fas fa-edit"></i>
-          </span>
-        </p>
-        <p class="footer-text">Your Player ID: <strong id="current-player-id"></strong></p>
-      </footer>
-    `;
-    const menu = document.getElementById("menu")!;
-    menu.innerHTML = menuHTML;
-  }
+function createGameMenu(controller: DeepReadonly<GameController>) {
+  return {
+    name: "",
+    draftName: "",
+    setupDone: false,
+    nameError: "",
+    scoreRed: 0,
+    scoreBlue: 0,
+    players: [] as PlayerRow[],
+    playerID: "",
+    isHost: false,
+    running: false,
+    inGame: false,
+    joinInput: "",
+    joinError: "",
+    joining: false,
+    copied: false,
+    copyTimer: 0,
+    pendingGameId: "",
+    previousHostId: "",
+    didAutoJoin: false,
+    joinOpen: false,
+    teams: TEAMS,
 
-  private bindEvents() {
-    this.startButton.onclick = () => this.controller.start();
-    this.stopButton.onclick = () => this.controller.stop();
-    this.leaveButton.onclick = () => window.location.reload();
-    this.joinGameButton.onclick = this.handleJoinGame;
-    this.menu.onclick = this.handleMenuClick;
-    const changeNameIcon = document.getElementById("change-name-icon")!;
-    changeNameIcon.onclick = this.requestPlayerName;
-  }
+    get invited() {
+      return Boolean(this.pendingGameId && this.pendingGameId !== this.playerID);
+    },
 
-  private handleJoinGame = () => {
-    const gameID = this.joinGameInput.value;
-    if (!gameID) {
-      alert("Please enter a game ID");
-      return;
-    }
-    this.joinGameInput.value = "";
-    this.controller.joinPlayer(gameID);
-  };
+    get inviteUrl() {
+      const gameId =
+        this.pendingGameId && this.pendingGameId !== this.playerID
+          ? this.pendingGameId
+          : this.playerID;
+      if (!gameId) return "";
+      return buildGameUrl(gameId);
+    },
 
-  private handleMenuClick = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const playerID = (target.closest("[data-player-id]") as HTMLElement)
-      ?.dataset.playerId;
-    if (!playerID) return;
+    get canHost() {
+      return !this.inGame || this.isHost;
+    },
 
-    if (target.classList.contains("remove-button")) {
-      this.controller.kickPlayer(playerID);
-      return;
-    }
+    get showJoin() {
+      return !this.inGame;
+    },
 
-    if (target.classList.contains("team-color")) {
-      const team = target.classList[1].split("-")[0] as Player["team"];
-      if (!team) return;
-      this.controller.changeTeam(playerID, team);
-    }
-  };
+    get showStart() {
+      return this.canHost && !this.running;
+    },
 
-  private getUIState() {
-    return {
-      playerID: this.controller.getPlayerID(),
-      scoreRed: this.controller.game.score.red,
-      scoreBlue: this.controller.game.score.blue,
-      players: this.controller.game.players.map((p) => ({
-        id: p.id,
-        name: p.name,
-        team: p.team,
-      })),
-      isHost: this.controller.isHost(),
-      running: this.controller.isRunning(),
-    };
-  }
+    get showStop() {
+      return this.isHost && this.running;
+    },
 
-  private refresh() {
-    this.currentPlayerID.textContent = this.controller.getPlayerID();
-    this.currentPlayerName.textContent = this.getPlayerName();
+    get showLeave() {
+      return this.inGame && !this.isHost;
+    },
 
-    const oldState = this.state;
-    const newState = this.getUIState();
-    if (deepEqual(oldState, newState)) return;
-    this.state = newState;
-
-    this.updateScores();
-    this.updateVisibility();
-
-    if (deepEqual(oldState.players, newState.players)) return;
-    this.updatePlayerList();
-  }
-
-  private updateScores() {
-    this.scoreRed.textContent = this.controller.game.score.red.toString();
-    this.scoreBlue.textContent = this.controller.game.score.blue.toString();
-  }
-
-  private updateVisibility() {
-    const { game } = this.controller;
-
-    if (game.players.length === 0) {
-      hide(this.stopButton);
-      hide(this.leaveButton);
-      show(this.startButton);
-      show(this.joinGameField);
-      show(this.controlsSeparator);
-    } else if (this.controller.isHost()) {
-      hide(this.joinGameField);
-      hide(this.controlsSeparator);
-      hide(this.leaveButton);
-
-      if (this.controller.isRunning()) {
-        show(this.stopButton);
-        hide(this.startButton);
-      } else {
-        hide(this.stopButton);
-        show(this.startButton);
+    get teamGroups(): TeamGroup[] {
+      const groups: TeamGroup[] = TEAMS.map((team) => ({
+        id: team.id,
+        label: team.label,
+        players: [],
+      }));
+      for (const player of this.players) {
+        groups.find((group) => group.id === player.team)?.players.push(player);
       }
-    } else {
-      hide(this.controlsSeparator);
-      hide(this.joinGameField);
-      hide(this.startButton);
-      hide(this.stopButton);
-      show(this.leaveButton);
-    }
-  }
+      return groups;
+    },
 
-  private updatePlayerList() {
-    this.playersList.innerHTML = this.state.players
-      .map((p) =>
-        this.getPlayerHTML(p, this.controller.game.players[0].id === p.id)
-      )
-      .join("");
-  }
+    get statusHint() {
+      if (this.joining) return "Connecting you to the match…";
+      if (this.running) return "Match in progress.";
+      if (!this.inGame) return "Invite friends, assign teams, then start.";
+      if (this.isHost) return "Assign teams, then start the match.";
+      return "Waiting for the host to start.";
+    },
 
-  private getPlayerHTML(
-    player: Pick<Player, "id" | "name" | "team">,
-    isPlayerHost: boolean
-  ) {
-    return `
-      <li>
-        <div data-player-id="${
-          player.id
-        }" class="is-flex is-align-items-center">
-          <div class="dropdown is-hoverable">
-            <div class="dropdown-trigger">
-              <span class="team-color ${
-                player.team
-              }-team" aria-haspopup="true"></span>
-            </div>
-            ${
-              this.controller.isHost()
-                ? `
-                  <div class="dropdown-menu" role="menu">
-                    <div class="dropdown-content">
-                      <a class="dropdown-item">
-                        <span class="team-color red-team"></span> Red Team
-                      </a>
-                      <a class="dropdown-item">
-                        <span class="team-color blue-team"></span> Blue Team
-                      </a>
-                      <a class="dropdown-item">
-                        <span class="team-color spectator-team"></span> Spectators
-                      </a>
-                    </div>
-                  </div>`
-                : ""
-            }
-          </div>
-          <span class="ml-2"><strong>${player.name.substring(0, 10)}</strong> ${
-      isPlayerHost ? "(host)" : ""
-    }</span>
-          ${
-            !this.controller.isHost() || isPlayerHost
-              ? ""
-              : `<button class="remove-button ml-auto">&times;</button>`
-          }
-        </div>
-      </li>
-    `;
-  }
+    init() {
+      document.getElementById("boot")?.remove();
 
-  private getPlayerName() {
-    let name: string = localStorage.getItem("name") || "";
-    if (!name) name = this.requestPlayerName();
-    return name;
-  }
+      const saved = localStorage.getItem("name")?.trim() || "";
+      this.name = saved;
+      this.draftName = saved;
+      this.setupDone = saved.length > 0;
+      this.pendingGameId = parseGameId(
+        new URLSearchParams(window.location.search).get("game") || "",
+      );
+      this.previousHostId = sessionStorage.getItem("hostGameId") || "";
 
-  private requestPlayerName = () => {
-    let name = "";
-    while (!name) {
-      name = prompt("Enter your name:", name) || "";
+      if (saved) {
+        controller.changeName(controller.getPlayerID(), saved);
+      }
+
+      this.sync();
+      this.tryAutoJoin();
+      setInterval(() => {
+        this.sync();
+        this.tryAutoJoin();
+      }, 500);
+    },
+
+    sync() {
+      this.playerID = controller.getPlayerID();
+      this.scoreRed = controller.game.score.red;
+      this.scoreBlue = controller.game.score.blue;
+      this.isHost = controller.isHost();
+      this.running = controller.isRunning();
+      this.inGame = controller.game.players.length > 0;
+      this.players = controller.game.players.map((player, index) => ({
+        id: player.id,
+        name: player.name,
+        team: player.team,
+        isHost: index === 0,
+        isYou: player.id === this.playerID,
+      }));
+    },
+
+    completeSetup() {
+      const name = this.draftName.trim();
+      if (!name) {
+        this.nameError = "Enter a name to continue";
+        return;
+      }
+
+      this.nameError = "";
+      this.name = name;
       localStorage.setItem("name", name);
-    }
-    return name;
+      controller.changeName(controller.getPlayerID(), name);
+      this.setupDone = true;
+      this.tryAutoJoin();
+    },
+
+    saveName() {
+      const name = this.name.trim();
+      if (!name) {
+        this.name = localStorage.getItem("name") || this.draftName;
+        return;
+      }
+
+      localStorage.setItem("name", name);
+      controller.changeName(controller.getPlayerID(), name);
+    },
+
+    start() {
+      if (!this.name.trim()) return;
+      controller.start();
+    },
+
+    stop() {
+      controller.stop();
+    },
+
+    leave() {
+      window.location.reload();
+    },
+
+    changeTeam(playerID: string, team: Player["team"]) {
+      controller.changeTeam(playerID, team);
+    },
+
+    kickPlayer(playerID: string) {
+      controller.kickPlayer(playerID);
+    },
+
+    async joinFromInput() {
+      const gameId = parseGameId(this.joinInput);
+      if (!gameId) {
+        this.joinOpen = true;
+        this.joinError = "Paste an invite link to join";
+        return;
+      }
+      this.joinOpen = true;
+      await this.joinGame(gameId);
+    },
+
+    async joinGame(gameId: string) {
+      if (!gameId || this.joining) return;
+      if (gameId === this.playerID) {
+        this.joinError = "That's your own invite link";
+        return;
+      }
+      if (!this.name.trim()) {
+        this.joinError = "Enter a name before joining";
+        return;
+      }
+
+      this.joinError = "";
+      this.joining = true;
+      this.pendingGameId = gameId;
+      sessionStorage.removeItem("hostGameId");
+      setGameQuery(gameId);
+
+      try {
+        await controller.joinPlayer(gameId);
+        this.joinInput = "";
+      } catch {
+        this.joinError = "Couldn't join that game. Check the link and try again.";
+      } finally {
+        this.joining = false;
+      }
+    },
+
+    tryAutoJoin() {
+      if (this.didAutoJoin || !this.setupDone || this.joining) return;
+      if (!this.playerID || !this.name.trim()) return;
+
+      const shouldJoin =
+        Boolean(this.pendingGameId) &&
+        this.pendingGameId !== this.playerID &&
+        this.pendingGameId !== this.previousHostId;
+
+      this.didAutoJoin = true;
+      if (!shouldJoin) {
+        sessionStorage.setItem("hostGameId", this.playerID);
+        setGameQuery(this.playerID);
+        return;
+      }
+
+      void this.joinGame(this.pendingGameId);
+    },
+
+    markCopied() {
+      this.copied = true;
+      window.clearTimeout(this.copyTimer);
+      this.copyTimer = window.setTimeout(() => {
+        this.copied = false;
+      }, 2000);
+    },
+
+    async copyInvite() {
+      if (!this.inviteUrl) return;
+
+      try {
+        await navigator.clipboard.writeText(this.inviteUrl);
+        this.markCopied();
+        return;
+      } catch {
+        // Clipboard API can be blocked; fall back to a selected input.
+      }
+
+      const input = document.createElement("textarea");
+      input.value = this.inviteUrl;
+      input.setAttribute("readonly", "");
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.select();
+      try {
+        if (document.execCommand("copy")) this.markCopied();
+      } catch {
+        // User can share the current page URL instead.
+      } finally {
+        input.remove();
+      }
+    },
   };
 }
 
-const hide = (el: HTMLElement) => {
-  el.classList.add("is-hidden");
-};
+function parseGameId(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
 
-const show = (el: HTMLElement) => {
-  el.classList.remove("is-hidden");
-};
+  try {
+    const url = new URL(trimmed, window.location.href);
+    const fromQuery = url.searchParams.get("game")?.trim();
+    if (fromQuery) return fromQuery;
+
+    const fromHash = new URLSearchParams(url.hash.replace(/^#/, ""))
+      .get("game")
+      ?.trim();
+    if (fromHash) return fromHash;
+  } catch {
+    return trimmed;
+  }
+
+  return trimmed;
+}
+
+function buildGameUrl(gameId: string): string {
+  const url = new URL(window.location.href);
+  url.searchParams.set("game", gameId);
+  url.hash = "";
+  return url.toString();
+}
+
+function setGameQuery(gameId: string) {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("game") === gameId) return;
+  url.searchParams.set("game", gameId);
+  history.replaceState(null, "", url);
+}

@@ -33,7 +33,17 @@ export const initialKeyboard = {
   spaceClicked,
 };
 
+function isTypingTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") {
+    return true;
+  }
+  return target.isContentEditable;
+}
+
 document.body.addEventListener("keydown", (e) => {
+  if (isTypingTarget(e.target)) return;
   if (e.key === "ArrowRight") rightClicked = true;
   else if (e.key === "ArrowLeft") leftClicked = true;
   else if (e.key === "ArrowUp") upClicked = true;
@@ -46,6 +56,7 @@ document.body.addEventListener("keydown", (e) => {
 });
 
 document.body.addEventListener("keyup", (e) => {
+  if (isTypingTarget(e.target)) return;
   if (e.key === "ArrowRight") rightClicked = false;
   else if (e.key === "ArrowLeft") leftClicked = false;
   else if (e.key === "ArrowUp") upClicked = false;
