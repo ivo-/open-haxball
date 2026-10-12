@@ -199,6 +199,7 @@ const classicMap: GameMap = {
     red,
     blue,
   },
+  goalDepth: DOOR_WIDTH,
 };
 
 export default classicMap;

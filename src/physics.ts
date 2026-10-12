@@ -31,7 +31,6 @@ import {
   PLAYER_MAX_VELOCITY,
 } from "./config";
 import { Keyboard } from "./keyboard";
-import { DOOR_WIDTH } from "./gameMapClassic";
 
 export type PhysicsPlayer = Body & {
   // The last time force was applied to the player. This is used to limit the
@@ -51,7 +50,7 @@ export class Physics {
   private engine: Engine;
   private render: Render;
   private runner: Runner;
-  private ball: Body;
+  private ball!: Body;
   private world: World;
   private players: PhysicsPlayer[] = [];
 
@@ -89,20 +88,8 @@ export class Physics {
       },
     });
 
-    const { players, ball, obstacles, goalLineBlue, goalLineRed } =
-      this.createGameObjects();
-
-    Composite.add(this.engine.world, [
-      goalLineBlue,
-      goalLineRed,
-      ...obstacles,
-      ...players,
-      ball,
-    ]);
-
-    this.players = players;
-    this.ball = ball;
     this.world = this.engine.world;
+    this.loadMap();
 
     this.runner = Runner.create({
       // TODO: Should be fixed? Running in background?
@@ -140,13 +127,27 @@ export class Physics {
     context.restore();
   }
 
-  private createGameObjects() {
+  private loadMap(): void {
+    const bodies = Composite.allBodies(this.world);
+    if (bodies.length > 0) {
+      Composite.remove(this.world, bodies);
+    }
+
+    const { ball, obstacles, goalLineBlue, goalLineRed } = this.createArena();
+    Composite.add(this.world, [
+      goalLineBlue,
+      goalLineRed,
+      ...obstacles,
+      ball,
+    ]);
+
+    this.players = [];
+    this.ball = ball;
+    this.render.options.background = this.game.gameMap.background;
+  }
+
+  private createArena() {
     const { gameMap } = this.game;
-
-    const players = this.game.players.map((gamePlayer, i) =>
-      this.gamePlayerToPhysicsPlayer(gamePlayer, i)
-    );
-
     const ballPos = gameMap.initialPos.ball;
     const ball = Bodies.circle(ballPos.x, ballPos.y, BALL_RADIUS, {
       id: emptyID,
@@ -241,7 +242,6 @@ export class Physics {
     );
 
     return {
-      players,
       ball,
       obstacles: [...rectangleObstacles, ...circleObstacles],
       goalLineBlue,
@@ -295,7 +295,7 @@ export class Physics {
     const ballPos = this.ball.position;
 
     // Check for goal
-    const goalLineWidth = DOOR_WIDTH;
+    const goalLineWidth = gameMap.goalDepth;
     const goalLineBlue = gameMap.goalLineBlue;
     const goalLineRed = gameMap.goalLineRed;
 
@@ -523,6 +523,7 @@ export class Physics {
   }
 
   start(): void {
+    this.loadMap();
     this.syncPlayers();
     this.resetPositions();
     Render.run(this.render);

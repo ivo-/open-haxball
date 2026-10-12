@@ -53,10 +53,13 @@ export type GameMap = {
   };
   goalLineRed: Pos & { y2: number; color: string };
   goalLineBlue: Pos & { y2: number; color: string };
+  /** How far the ball must travel past the goal line before it scores. */
+  goalDepth: number;
 };
 
 export type Game = {
   players: Player[];
+  mapId: string;
   gameMap: GameMap;
   // TODO:
   // sound: boolean;

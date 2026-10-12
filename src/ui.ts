@@ -4,6 +4,7 @@ import Alpine from "alpinejs";
 import { DeepReadonly } from "ts-essentials";
 import { Player } from "./types";
 import { GameController } from "./game";
+import { MAPS } from "./maps";
 
 type PlayerRow = {
   id: string;
@@ -55,6 +56,8 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
     didAutoJoin: false,
     joinOpen: false,
     teams: TEAMS,
+    maps: MAPS.map(({ id, name, blurb }) => ({ id, name, blurb })),
+    mapId: "classic",
 
     get invited() {
       return Boolean(this.pendingGameId && this.pendingGameId !== this.playerID);
@@ -89,6 +92,10 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       return this.inGame;
     },
 
+    get mapName() {
+      return this.maps.find((map) => map.id === this.mapId)?.name ?? "Classic";
+    },
+
     get teamGroups(): TeamGroup[] {
       const groups: TeamGroup[] = TEAMS.map((team) => ({
         id: team.id,
@@ -105,7 +112,7 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       if (this.joining) return "Connecting you to the match…";
       if (this.running) return "Match in progress.";
       if (!this.inGame) return "Create a match or join a friend.";
-      if (this.isHost) return "Invite friends, assign teams, then start.";
+      if (this.isHost) return "Invite friends, pick a map, then start.";
       return "Waiting for the host to start.";
     },
 
@@ -140,6 +147,7 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       this.isHost = controller.isHost();
       this.running = controller.isRunning();
       this.inGame = controller.game.players.length > 0;
+      this.mapId = controller.game.mapId;
       this.players = controller.game.players.map((player, index) => ({
         id: player.id,
         name: player.name,
@@ -178,6 +186,12 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
     createMatch() {
       if (!this.name.trim()) return;
       controller.createMatch();
+      this.sync();
+    },
+
+    selectMap(mapId: string) {
+      if (!this.isHost || this.running) return;
+      controller.selectMap(mapId);
       this.sync();
     },
 

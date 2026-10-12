@@ -2,7 +2,7 @@ import { Network } from "./network";
 import { Physics } from "./physics";
 import { initialKeyboard, onKeyboard } from "./keyboard";
 import { Action, Game, GoalHandler, Player, Snapshot } from "./types";
-import classicMap from "./gameMapClassic";
+import { getMap, isMapId } from "./maps";
 import { SYNC_WORLDS_INTERVAL } from "./config";
 import { toast } from "./toast";
 
@@ -21,7 +21,8 @@ export class GameController {
 
   constructor() {
     this.game = {
-      gameMap: classicMap,
+      mapId: "classic",
+      gameMap: getMap("classic"),
       players: [],
       scoreLimit: 5,
       score: {
@@ -116,6 +117,7 @@ export class GameController {
         break;
       case "updateGame":
         Object.assign(this.game, action.game);
+        this.game.gameMap = getMap(this.game.mapId);
         this.game.players.forEach((player) => {
           if (player.id === this.network.playerID) return;
           if (this.network.connections[player.id]) return;
@@ -262,6 +264,15 @@ export class GameController {
 
   isRunning() {
     return this.physics.isRunning();
+  }
+
+  selectMap(mapId: string) {
+    if (!this.isHost() || this.isRunning()) return;
+    if (!isMapId(mapId) || this.game.mapId === mapId) return;
+
+    this.game.mapId = mapId;
+    this.game.gameMap = getMap(mapId);
+    this.broadcastGame();
   }
 
   changeTeam(playerID: string, team: Player["team"]) {

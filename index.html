@@ -143,6 +143,23 @@
           <p class="hint" x-show="!running">Share this link. Friends join in the browser.</p>
         </div>
 
+        <div class="map-picker" x-show="inGame && !running">
+          <p class="field-label">Map</p>
+          <div class="map-options" role="radiogroup" aria-label="Map">
+            <template x-for="map in maps" :key="map.id">
+              <button type="button" class="map-option" role="radio"
+                :class="{ 'is-selected': mapId === map.id }"
+                :aria-checked="mapId === map.id"
+                :disabled="!isHost"
+                @click="selectMap(map.id)">
+                <span class="map-swatch" :class="'is-' + map.id"></span>
+                <span class="map-name" x-text="map.name"></span>
+                <span class="map-blurb" x-text="map.blurb"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
         <div class="actions">
           <button type="button" class="btn btn-primary btn-block" x-show="showCreate" :disabled="joining" @click="createMatch">
             <i class="fas fa-plus"></i>
@@ -202,6 +219,8 @@
         <span class="dot-sep">·</span>
         <kbd>Space</kbd>
         kick
+        <span class="dot-sep">·</span>
+        <span x-text="mapName"></span>
       </p>
     </div>
 

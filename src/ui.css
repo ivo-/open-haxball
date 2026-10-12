@@ -27,6 +27,8 @@
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(18px);
   color: var(--text);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
 }
 
 .brand,
@@ -391,8 +393,74 @@
 
 .invite,
 .actions,
-.join-area {
+.join-area,
+.map-picker {
   margin-top: 14px;
+}
+
+.map-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.map-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-option:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.map-option.is-selected {
+  border-color: rgba(61, 214, 140, 0.75);
+  background: rgba(61, 214, 140, 0.1);
+}
+
+.map-option:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.map-swatch {
+  height: 42px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+}
+
+.map-swatch.is-classic {
+  background:
+    linear-gradient(#d5efc6, #d5efc6) center / 2px 100% no-repeat,
+    repeating-linear-gradient(90deg, #2a7a46 0 14px, #348a52 14px 28px);
+}
+
+.map-swatch.is-hockey {
+  background:
+    linear-gradient(#e23d4a, #e23d4a) center / 2px 100% no-repeat,
+    linear-gradient(#2f6fe0, #2f6fe0) 33% 0 / 2px 100% no-repeat,
+    linear-gradient(#2f6fe0, #2f6fe0) 67% 0 / 2px 100% no-repeat,
+    linear-gradient(#e7f5fb, #d5eef6);
+}
+
+.map-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.map-blurb {
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .hint {
