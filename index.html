@@ -46,8 +46,8 @@
   </div>
 
   <div id="wrapper" class="app-shell" x-data="gameMenu" x-cloak
-    :class="{ 'is-playing': running, 'is-setup': !setupDone }">
-    <aside id="menu" class="panel">
+    :class="{ 'is-playing': running, 'is-lobby': inGame && !running, 'is-setup': !setupDone }">
+    <aside id="menu" class="panel" x-show="!running">
       <section class="setup" x-show="!setupDone">
         <div class="brand">
           <span class="brand-ball"></span>
@@ -79,7 +79,7 @@
           </label>
         </header>
 
-        <div class="scoreboard" aria-label="Score">
+        <div class="scoreboard" aria-label="Score" x-show="inGame">
           <div class="score-team is-red">
             <span class="score-name">Red</span>
             <span class="score-value" x-text="scoreRed">0</span>
@@ -144,13 +144,13 @@
         </div>
 
         <div class="actions">
+          <button type="button" class="btn btn-primary btn-block" x-show="showCreate" :disabled="joining" @click="createMatch">
+            <i class="fas fa-plus"></i>
+            Create match
+          </button>
           <button type="button" class="btn btn-primary btn-block" x-show="showStart" :disabled="joining" @click="start">
             <i class="fas fa-play"></i>
             Start match
-          </button>
-          <button type="button" class="btn btn-danger btn-block" x-show="showStop" @click="stop">
-            <i class="fas fa-stop"></i>
-            Stop match
           </button>
           <button type="button" class="btn btn-ghost btn-block" x-show="showLeave" @click="leave">
             <i class="fas fa-sign-out-alt"></i>
@@ -171,16 +171,40 @@
             <p class="field-error" x-show="joinError" x-text="joinError"></p>
           </form>
         </div>
-
-        <p class="controls-hint" x-show="running">
-          <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>
-          move
-          <span class="dot-sep">·</span>
-          <kbd>Space</kbd>
-          kick
-        </p>
       </section>
     </aside>
+
+    <div class="match-hud" x-show="running">
+      <div class="match-bar">
+        <div class="match-score" aria-label="Score">
+          <span class="match-score-side is-red">
+            <span class="score-name">Red</span>
+            <strong class="score-value" x-text="scoreRed">0</strong>
+          </span>
+          <span class="score-divider">vs</span>
+          <span class="match-score-side is-blue">
+            <strong class="score-value" x-text="scoreBlue">0</strong>
+            <span class="score-name">Blue</span>
+          </span>
+        </div>
+        <button type="button" class="btn btn-danger" x-show="showStop" @click="stop">
+          <i class="fas fa-stop"></i>
+          Stop
+        </button>
+        <button type="button" class="btn btn-ghost" x-show="showLeave" @click="leave">
+          <i class="fas fa-sign-out-alt"></i>
+          Leave
+        </button>
+      </div>
+      <p class="controls-hint">
+        <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd>
+        move
+        <span class="dot-sep">·</span>
+        <kbd>Space</kbd>
+        kick
+      </p>
+    </div>
+
     <div id="app" class="pitch"></div>
   </div>
   <script type="module" src="/src/main.ts"></script>

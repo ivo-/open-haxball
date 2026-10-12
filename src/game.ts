@@ -170,12 +170,21 @@ export class GameController {
     });
   }
 
-  start() {
+  createMatch() {
     if (this.game.players.length === 0) {
       this.game.players.push(
         createPlayer(this.network.playerID, this.network.playerName),
       );
     }
+
+    if (this.isHost()) {
+      this.broadcastGame();
+    }
+  }
+
+  start() {
+    if (this.physics.isRunning()) return;
+    this.createMatch();
 
     onKeyboard((keyboard) => {
       const player = this.game.players.find(

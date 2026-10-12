@@ -34,8 +34,10 @@ body {
 }
 
 .app-shell.is-playing {
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
 }
 
 .app-shell.is-setup .panel {
@@ -59,7 +61,8 @@ body {
   }
 
   .app-shell,
-  .app-shell.is-playing {
+  .app-shell.is-playing,
+  .app-shell.is-lobby {
     flex-direction: column;
     justify-content: flex-start;
     min-height: 100vh;

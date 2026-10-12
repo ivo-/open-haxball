@@ -69,16 +69,16 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       return buildGameUrl(gameId);
     },
 
-    get canHost() {
-      return !this.inGame || this.isHost;
-    },
-
     get showJoin() {
       return !this.inGame;
     },
 
+    get showCreate() {
+      return !this.inGame;
+    },
+
     get showStart() {
-      return this.canHost && !this.running;
+      return this.inGame && this.isHost && !this.running;
     },
 
     get showStop() {
@@ -104,8 +104,8 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
     get statusHint() {
       if (this.joining) return "Connecting you to the match…";
       if (this.running) return "Match in progress.";
-      if (!this.inGame) return "Invite friends, assign teams, then start.";
-      if (this.isHost) return "Assign teams, then start the match.";
+      if (!this.inGame) return "Create a match or join a friend.";
+      if (this.isHost) return "Invite friends, assign teams, then start.";
       return "Waiting for the host to start.";
     },
 
@@ -175,13 +175,21 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
       controller.changeName(controller.getPlayerID(), name);
     },
 
+    createMatch() {
+      if (!this.name.trim()) return;
+      controller.createMatch();
+      this.sync();
+    },
+
     start() {
       if (!this.name.trim()) return;
       controller.start();
+      this.sync();
     },
 
     stop() {
       controller.stop();
+      this.sync();
     },
 
     leave() {
