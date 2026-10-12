@@ -31,6 +31,7 @@ import {
   PLAYER_MAX_VELOCITY,
 } from "./config";
 import { Keyboard } from "./keyboard";
+import { FrameWall, goalFrameWalls, keepDiscOutsideWall } from "./goalFrame";
 
 export type PhysicsPlayer = Body & {
   // The last time force was applied to the player. This is used to limit the
@@ -59,6 +60,7 @@ export class Physics {
   private onGoalHandler: GoalHandler;
   private onTriggerSync: () => void;
   private isHost: () => boolean;
+  private frameOrigin = new WeakMap<Body, { x: number; y: number }>();
 
   constructor(
     game: DeepReadonly<Game>,
@@ -98,6 +100,11 @@ export class Physics {
 
     Events.on(this.engine, "beforeUpdate", () => {
       this.handleBoundaryCollisions();
+      this.captureFrameOrigins();
+    });
+
+    Events.on(this.engine, "afterUpdate", () => {
+      this.containGoalFrames();
     });
 
     Events.on(this.render, "afterRender", () => {
@@ -275,6 +282,85 @@ export class Physics {
         fillStyle: gameMap.playerColors[player.team],
       },
     }) as PhysicsPlayer;
+  }
+
+  private captureFrameOrigins(): void {
+    const bodies = [...this.players, this.ball];
+    for (const body of bodies) {
+      this.frameOrigin.set(body, { x: body.position.x, y: body.position.y });
+    }
+  }
+
+  private containGoalFrames(): void {
+    const { gameMap } = this.game;
+    const walls = [
+      ...goalFrameWalls(
+        "red",
+        gameMap.goalLineRed.x,
+        gameMap.goalLineRed.y,
+        gameMap.goalLineRed.y2,
+        gameMap.goalDepth,
+      ),
+      ...goalFrameWalls(
+        "blue",
+        gameMap.goalLineBlue.x,
+        gameMap.goalLineBlue.y,
+        gameMap.goalLineBlue.y2,
+        gameMap.goalDepth,
+      ),
+    ];
+
+    const bodies = [
+      ...this.players.map((body) => ({ body, radius: PLAYER_RADIUS })),
+      { body: this.ball, radius: BALL_RADIUS },
+    ];
+
+    for (const { body, radius } of bodies) {
+      const origin = this.frameOrigin.get(body) ?? {
+        x: body.position.x,
+        y: body.position.y,
+      };
+      for (let pass = 0; pass < 4; pass++) {
+        for (const wall of walls) {
+          this.stopAtWall(body, radius, origin, wall);
+        }
+      }
+    }
+  }
+
+  /** Keep a disc on the side of a goal wall it started the step on. */
+  private stopAtWall(
+    body: Body,
+    radius: number,
+    origin: { x: number; y: number },
+    wall: FrameWall,
+  ): void {
+    const resolved = keepDiscOutsideWall(body.position, origin, radius, wall);
+    if (!resolved) return;
+
+    const velocity = Body.getVelocity(body);
+    const closestX = Math.max(wall.x, Math.min(resolved.x, wall.x + wall.width));
+    const closestY = Math.max(wall.y, Math.min(resolved.y, wall.y + wall.height));
+    let nx = resolved.x - closestX;
+    let ny = resolved.y - closestY;
+    let normalLength = Math.hypot(nx, ny);
+    if (normalLength < 1e-6) {
+      nx = resolved.x - body.position.x;
+      ny = resolved.y - body.position.y;
+      normalLength = Math.hypot(nx, ny);
+    }
+    Body.setPosition(body, resolved);
+    if (normalLength > 0) {
+      nx /= normalLength;
+      ny /= normalLength;
+      const inward = velocity.x * nx + velocity.y * ny;
+      if (inward < 0) {
+        Body.setVelocity(body, {
+          x: velocity.x - inward * nx,
+          y: velocity.y - inward * ny,
+        });
+      }
+    }
   }
 
   // TODO: Properly abstract those in the config.
@@ -471,24 +557,23 @@ export class Physics {
     ) {
       const velocityVector = { ...player.velocity };
 
-      let change = MOVEMENT_VELOCITY_CHANGE;
-      if ((leftClicked || rightClicked) && (upClicked || downClicked)) {
-        change /= 2;
+      const diagonal =
+        (leftClicked || rightClicked) && (upClicked || downClicked);
+      const change = diagonal
+        ? MOVEMENT_VELOCITY_CHANGE / Math.SQRT2
+        : MOVEMENT_VELOCITY_CHANGE;
+
+      if (leftClicked) velocityVector.x -= change;
+      if (rightClicked) velocityVector.x += change;
+      if (upClicked) velocityVector.y -= change;
+      if (downClicked) velocityVector.y += change;
+
+      const speed = Math.hypot(velocityVector.x, velocityVector.y);
+      if (speed > PLAYER_MAX_VELOCITY) {
+        const scale = PLAYER_MAX_VELOCITY / speed;
+        velocityVector.x *= scale;
+        velocityVector.y *= scale;
       }
-
-      if (leftClicked) velocityVector.x -= MOVEMENT_VELOCITY_CHANGE;
-      if (rightClicked) velocityVector.x += MOVEMENT_VELOCITY_CHANGE;
-      if (upClicked) velocityVector.y -= MOVEMENT_VELOCITY_CHANGE;
-      if (downClicked) velocityVector.y += MOVEMENT_VELOCITY_CHANGE;
-
-      velocityVector.x = Math.min(
-        Math.max(velocityVector.x, -PLAYER_MAX_VELOCITY),
-        PLAYER_MAX_VELOCITY
-      );
-      velocityVector.y = Math.min(
-        Math.max(velocityVector.y, -PLAYER_MAX_VELOCITY),
-        PLAYER_MAX_VELOCITY
-      );
 
       if (velocityVector.x !== 0 || velocityVector.y !== 0) {
         Body.setVelocity(player, velocityVector);

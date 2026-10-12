@@ -3,17 +3,18 @@ import {
   COLLISION_FILTER_OTHER,
   PLAYER_RADIUS,
 } from "./config";
+import { GOAL_DEPTH, goalFrameWalls } from "./goalFrame";
 import { GameMap, Obstacle, ObstacleCircle, ObstacleRectangle } from "./types";
 
 const width = 1000;
 const height = 550;
-const goalInset = 76;
-const goalDepth = 34;
 const goalHeight = 108;
 const wallThickness = 2000;
 const wallMultiplier = 20;
 
 const margin = PLAYER_RADIUS * 2;
+const goalDepth = GOAL_DEPTH;
+const goalInset = margin + goalDepth;
 const innerWidth = width - margin * 2;
 const innerHeight = height - margin * 2;
 
@@ -108,9 +109,12 @@ function goal(side: "red" | "blue"): Obstacle[] {
 
   return [
     rect(barX, goalTop, goalDepth, goalHeight, net, "transparent", 0, paint),
-    rect(backX, goalTop, 1, goalHeight, goalRed, goalRed, 3),
-    rect(barX, goalTop, goalDepth, 1, goalRed, goalRed, 3),
-    rect(barX, goalBottom, goalDepth, 1, goalRed, goalRed, 3),
+    ...goalFrameWalls(side, mouthX, goalTop, goalBottom, goalDepth).map((wall) =>
+      rect(wall.x, wall.y, wall.width, wall.height, "transparent"),
+    ),
+    rect(backX, goalTop, 1, goalHeight, goalRed, goalRed, 3, paint),
+    rect(barX, goalTop, goalDepth, 1, goalRed, goalRed, 3, paint),
+    rect(barX, goalBottom, goalDepth, 1, goalRed, goalRed, 3, paint),
     line(lineX, margin, 3, goalTop - margin, redLine),
     line(lineX, goalBottom, 3, margin + innerHeight - goalBottom, redLine),
     circle(mouthX, goalTop, 8, goalRed, "#fff", 2),
