@@ -73,9 +73,8 @@ export class GameController {
   handleDisconnect = (playerID: string) => {
     const wasHost = this.game.players[0]?.id === playerID;
     const index = this.game.players.findIndex((p) => p.id === playerID);
-    if (index !== -1) {
-      this.game.players.splice(index, 1);
-    }
+    if (index === -1) return;
+    this.game.players.splice(index, 1);
 
     if (wasHost) {
       toast("The host left the match", "info");
@@ -83,6 +82,7 @@ export class GameController {
       return;
     }
 
+    toast("A player left", "info");
     this.broadcastGame();
   };
 

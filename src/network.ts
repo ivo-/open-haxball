@@ -35,10 +35,6 @@ export class Network {
     this.peer.on("connection", (conn) => {
       conn.on("data", (data) => this.options.onMessage(data, conn.peer));
       conn.on("close", () => {
-        toast(
-          "Connection lost with the server. Please refresh the page.",
-          "error"
-        );
         this.connectionLost(conn.peer);
       });
       conn.on("open", () => {
@@ -95,7 +91,6 @@ export class Network {
 
   disconnectFrom(playerID: string): void {
     if (!this.peer) throw new Error("Network not started");
-    toast("A player left", "info");
     this.connections[playerID].close();
     delete this.connections[playerID];
   }
