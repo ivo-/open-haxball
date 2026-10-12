@@ -15,6 +15,7 @@ export class Network {
   public connections: { [playerID: string]: DataConnection };
   private options: NetworkOptions;
   private connectionPromise: Promise<void>;
+  private ignoringDisconnects = false;
 
   constructor(options: NetworkOptions) {
     this.options = options;
@@ -64,6 +65,7 @@ export class Network {
 
   private connectionLost(playerID: string): void {
     delete this.connections[playerID];
+    if (this.ignoringDisconnects) return;
     this.options.onDisconnect(playerID);
   }
 
@@ -96,6 +98,15 @@ export class Network {
     toast("A player left", "info");
     this.connections[playerID].close();
     delete this.connections[playerID];
+  }
+
+  disconnectAll(): void {
+    this.ignoringDisconnects = true;
+    for (const playerID of Object.keys(this.connections)) {
+      this.connections[playerID].close();
+      delete this.connections[playerID];
+    }
+    this.ignoringDisconnects = false;
   }
 
   destroy(): void {

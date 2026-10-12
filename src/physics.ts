@@ -432,6 +432,7 @@ export class Physics {
       y: gameMap.initialPos.ball.y,
     });
     Body.setVelocity(this.ball, { x: 0, y: 0 });
+    Body.setAngularVelocity(this.ball, 0);
 
     this.players.forEach((player, i) => {
       const gamePlayer = this.game.players.find(
@@ -443,6 +444,7 @@ export class Physics {
       const position = possiblePositions[i] || possiblePositions[0];
       Body.setPosition(player, { x: position.x, y: position.y });
       Body.setVelocity(player, { x: 0, y: 0 });
+      Body.setAngularVelocity(player, 0);
     });
   }
 
@@ -522,6 +524,7 @@ export class Physics {
 
   start(): void {
     this.syncPlayers();
+    this.resetPositions();
     Render.run(this.render);
     Runner.run(this.runner, this.engine);
     this.applyForcesTimer = setInterval(() => this.applyAllForces(), 1000 / 30);

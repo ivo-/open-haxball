@@ -71,11 +71,17 @@ export class GameController {
   };
 
   handleDisconnect = (playerID: string) => {
+    const wasHost = this.game.players[0]?.id === playerID;
     const index = this.game.players.findIndex((p) => p.id === playerID);
     if (index !== -1) {
       this.game.players.splice(index, 1);
     }
-    // TODO: Handle the case when host kicked the player.
+
+    if (wasHost) {
+      toast("The host left the match", "info");
+      this.handleMatchEnded();
+      return;
+    }
 
     this.broadcastGame();
   };
@@ -91,6 +97,9 @@ export class GameController {
         break;
       case "stopGame":
         this.stop();
+        break;
+      case "leaveMatch":
+        this.handleMatchEnded();
         break;
       case "identify":
         if (!player) return;
@@ -185,6 +194,10 @@ export class GameController {
   start() {
     if (this.physics.isRunning()) return;
     this.createMatch();
+    this.game.score = { red: 0, blue: 0 };
+    this.game.players.forEach((player) => {
+      player.keyboard = { ...initialKeyboard };
+    });
 
     onKeyboard((keyboard) => {
       const player = this.game.players.find(
@@ -210,13 +223,37 @@ export class GameController {
   }
 
   stop() {
-    clearInterval(this.syncWorldsInterval);
-    onKeyboard(() => {});
-
-    this.physics.stop();
+    this.halt();
     if (this.isHost()) {
       this.network.broadcast({ type: "stopGame" });
     }
+  }
+
+  leaveMatch() {
+    const isHost = this.isHost();
+    this.halt();
+    if (isHost) {
+      this.network.broadcast({ type: "leaveMatch" });
+    }
+    this.network.disconnectAll();
+    this.resetMatchState();
+  }
+
+  private handleMatchEnded() {
+    this.halt();
+    this.network.disconnectAll();
+    this.resetMatchState();
+  }
+
+  private halt() {
+    clearInterval(this.syncWorldsInterval);
+    onKeyboard(() => {});
+    this.physics.stop();
+  }
+
+  private resetMatchState() {
+    this.game.players = [];
+    this.game.score = { red: 0, blue: 0 };
   }
 
   getPlayerID() {

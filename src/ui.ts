@@ -86,7 +86,7 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
     },
 
     get showLeave() {
-      return this.inGame && !this.isHost;
+      return this.inGame;
     },
 
     get teamGroups(): TeamGroup[] {
@@ -193,7 +193,15 @@ function createGameMenu(controller: DeepReadonly<GameController>) {
     },
 
     leave() {
-      window.location.reload();
+      controller.leaveMatch();
+      this.pendingGameId = this.playerID;
+      this.previousHostId = this.playerID;
+      sessionStorage.setItem("hostGameId", this.playerID);
+      setGameQuery(this.playerID);
+      this.didAutoJoin = true;
+      this.joinOpen = false;
+      this.joinError = "";
+      this.sync();
     },
 
     changeTeam(playerID: string, team: Player["team"]) {

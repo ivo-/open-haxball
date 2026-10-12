@@ -89,6 +89,10 @@ export type ActionStopGame = {
   type: "stopGame";
 };
 
+export type ActionLeaveMatch = {
+  type: "leaveMatch";
+};
+
 export type ActionIdentify = {
   type: "identify";
   name: string;
@@ -128,6 +132,7 @@ export type ActionConnectTo = {
 export type Action =
   | ActionStartGame
   | ActionStopGame
+  | ActionLeaveMatch
   | ActionIdentify
   | ActionUpdateGame
   | ActionUpdateKeyboard
