@@ -30,3 +30,10 @@ export const SYNC_WORLDS_INTERVAL = 1000 / 20;
 
 // How often to measure round-trip time to connected players.
 export const PING_INTERVAL = 1500;
+
+// Snapshot reconciliation: ignore tiny errors, lerp mid errors, hard-snap large ones.
+export const SYNC_IGNORE_DISTANCE = 2;
+export const SYNC_SNAP_DISTANCE = 90;
+export const SYNC_CORRECT_FACTOR = 0.28;
+export const SYNC_LOCAL_CORRECT_FACTOR = 0.12;
+export const SYNC_VELOCITY_BLEND = 0.4;

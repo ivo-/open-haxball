@@ -28,6 +28,11 @@ import {
   BALL_FORCE_MULTIPLIER,
   PHYSICS_RUNNER_INTERVAL,
   PLAYER_MAX_VELOCITY,
+  SYNC_IGNORE_DISTANCE,
+  SYNC_SNAP_DISTANCE,
+  SYNC_CORRECT_FACTOR,
+  SYNC_LOCAL_CORRECT_FACTOR,
+  SYNC_VELOCITY_BLEND,
 } from "./config";
 import { Keyboard } from "./keyboard";
 import { FrameWall, goalFrameWalls, keepDiscOutsideWall } from "./goalFrame";
@@ -63,6 +68,7 @@ export class Physics {
   private onGoalHandler: GoalHandler;
   private onTriggerSync: () => void;
   private isHost: () => boolean;
+  private getLocalPlayerName: () => string;
   private frameOrigin = new WeakMap<Body, { x: number; y: number }>();
 
   constructor(
@@ -70,12 +76,14 @@ export class Physics {
     element: string,
     onGoalHandler: GoalHandler,
     onTriggerSync: () => void,
-    isHost: () => boolean
+    isHost: () => boolean,
+    getLocalPlayerName: () => string,
   ) {
     this.game = game;
     this.onGoalHandler = onGoalHandler;
     this.onTriggerSync = onTriggerSync;
     this.isHost = isHost;
+    this.getLocalPlayerName = getLocalPlayerName;
 
     this.engine = Engine.create({
       gravity: { x: 0, y: 0 },
@@ -545,7 +553,9 @@ export class Physics {
     let appliedForce = false;
     player.render.lineWidth = spaceClicked ? PLAYER_POWER_KICK_RADIUS * 2 : 0;
 
-    if (!this.isHost()) {
+    // Host simulates everyone. Guests only predict their own disc; remotes coast from snapshots.
+    const isLocal = String(player.id) === this.getLocalPlayerName();
+    if (!this.isHost() && !isLocal) {
       return appliedForce;
     }
 
@@ -675,24 +685,54 @@ export class Physics {
   }
 
   applySnapshot(snapshot: Snapshot): void {
+    if (this.isHost()) return;
+
     const { ball, players: snapshotPlayers } = snapshot;
+    const localName = this.getLocalPlayerName();
 
-    Body.setPosition(this.ball, { x: ball.x, y: ball.y });
-    Body.setVelocity(this.ball, { x: ball.velocityX, y: ball.velocityY });
+    this.reconcileBody(this.ball, ball, SYNC_CORRECT_FACTOR);
 
-    for (let player of this.players) {
-      if (!snapshotPlayers[player.id]) {
+    for (const player of this.players) {
+      const auth = snapshotPlayers[player.id as unknown as string];
+      if (!auth) {
         console.warn(`Player ${player.id} not found in snapshot`);
-        return;
+        continue;
       }
 
-      const { x, y, velocityX, velocityY } = snapshotPlayers[player.id];
-
-      Body.translate(player, {
-        x: x - player.position.x,
-        y: y - player.position.y,
-      });
-      Body.setVelocity(player, { x: velocityX, y: velocityY });
+      const isLocal = String(player.id) === localName;
+      this.reconcileBody(
+        player,
+        auth,
+        isLocal ? SYNC_LOCAL_CORRECT_FACTOR : SYNC_CORRECT_FACTOR,
+      );
     }
+  }
+
+  private reconcileBody(
+    body: Body,
+    auth: SnapshotCoordinates,
+    correctFactor: number,
+  ): void {
+    const dx = auth.x - body.position.x;
+    const dy = auth.y - body.position.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance > SYNC_SNAP_DISTANCE) {
+      Body.setPosition(body, { x: auth.x, y: auth.y });
+    } else if (distance > SYNC_IGNORE_DISTANCE) {
+      Body.translate(body, {
+        x: dx * correctFactor,
+        y: dy * correctFactor,
+      });
+    }
+
+    Body.setVelocity(body, {
+      x:
+        body.velocity.x +
+        (auth.velocityX - body.velocity.x) * SYNC_VELOCITY_BLEND,
+      y:
+        body.velocity.y +
+        (auth.velocityY - body.velocity.y) * SYNC_VELOCITY_BLEND,
+    });
   }
 }

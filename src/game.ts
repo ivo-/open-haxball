@@ -37,6 +37,7 @@ export class GameController {
       this.handleGoal,
       this.handleSync,
       this.isHost,
+      this.getLocalPlayerName,
     );
 
     this.network = new Network({
@@ -261,6 +262,13 @@ export class GameController {
   getPlayerID() {
     return this.network.playerID;
   }
+
+  getLocalPlayerName = () => {
+    const local = this.game.players.find(
+      (player) => player.id === this.network.playerID,
+    );
+    return local?.name ?? this.network.playerName;
+  };
 
   getPing(playerID: string): number | null {
     return this.network.getPing(playerID);
