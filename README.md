@@ -1,5 +1,5 @@
 <h1>Open-source <a href="https://www.haxball.com/" target="_blank">Haxball</a> clone</h1>
-<img width="1100" alt="Open Haxball" src="screenshot.png">
+<img width="1024" alt="Open Haxball" src="screenshot.png">
 
 Browser 2D football. Host a match, share a link, play in the same tab.
 
